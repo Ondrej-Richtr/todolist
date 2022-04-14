@@ -25,10 +25,10 @@ void print_date(date_t date);
 
 typedef struct
 {
-	int status;						//signalizes if entry was completed
-	date_t created_date;			//date of creation
-	date_t deadline;				//deadline for this entry
-	char text_buffer[TEXT_MAX_LEN];	//description of entry
+	int status;							//signalizes if entry was completed
+	date_t created_date;				//date of creation
+	date_t deadline;					//deadline for this entry
+	char text_buffer[TEXT_MAX_LEN + 1];	//description of entry, +1 for NULL char
 } todo_entry_t;
 
 void print_todoentry(todo_entry_t entry, int style);

@@ -176,8 +176,31 @@ int load_date(FILE *f, date_t *d, int c)
 	return 0;
 }
 
+size_t load_buffer(FILE *f, char *buffer, int *in_char)
+{	/*loads text from file into buffer, until it reaches max size or newline or EOF
+	returns amount of characters loaded, 0 also when given invalid input
+	if given non-NULL in_char then it takes that char as first character and returns last char there*/
+	if (!f || !buffer) return 0;
+	
+	size_t count = 0;
+	int c;
+	if (in_char == NULL) c = fgetc(f);
+	else c = *in_char;
+	
+	while (c != EOF && c != '\n' && count < TEXT_MAX_LEN)
+	{
+		buffer[count++] = (char)c;
+		c = fgetc(f);
+	}
+	
+	if (in_char != NULL)*in_char = c;
+	return count;
+}
+
 int load_one_entry(FILE *f, todo_entry_t *entry)
-{	//current line should not be comment (otherwise it returns 1)
+{	//returns 0 if success, current line should not be comment, otherwise it returns 1
+	if (!f || !entry) return 1;
+	
 	int c = fgetc(f);
 	
 	switch(c)
@@ -186,34 +209,52 @@ int load_one_entry(FILE *f, todo_entry_t *entry)
 		break;
 		case 'X': entry->status = 1;	//done
 		break;
-		default:						//otherwise
-		return 1;
+		default: return 1;				//otherwise
 	}
 
 	while (isseparator(c = fgetc(f))); //skipping separators
+	if (load_date(f, &entry->deadline, c)) return 1;
 	
-	//TODO
+	while (isseparator(c = fgetc(f))); //skipping separators
+	if (load_date(f, &entry->created_date, c)) return 1;
 	
-	/*while ((c = fgetc(f)) != '\n' && c != EOF)
-	{
-		//entry->status;
-		//entry->deadline;
-		//entry->text_buffer;
-	}*/
+	while (isseparator(c = fgetc(f))); //skipping separators
+	size_t size = load_buffer(f, &entry->text_buffer, &c);
+	
+	//this should be always possible as the length of buffer is TEXT_MAX_SIZE + 1
+	entry->text_buffer[size] = '\0';
 	
 	return 0;
 }
 
 int load_entries(llist *list, const char *path)
-{
+{	//loads entries from specified file into linked list (should be empty)
+	//returns 0 if success, non-zero if failure which empties the linked list
 	FILE *f = fopen(path, "r");
+	if (f == NULL) return 1;
 	
-	if (f == NULL) return 0;
+	struct node *n = NULL;
+	todo_entry_t *entry = NULL;
 	
-	//
+	while (!feof(f))
+	{
+		n = malloc(sizeof(struct node));
+		if (n == NULL)
+		{
+			//TODO destroy linked list
+			return 2;
+		}
+		entry = malloc(sizeof(todo_entry_t));
+		if (entry == NULL)
+		{
+			//TODO destroy linked list
+			free(n);
+			return 2;
+		}
+	}
 	
 	fclose(f);
-	return 1;
+	return 0;
 }
 
 //main things
