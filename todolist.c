@@ -94,7 +94,7 @@ int llist_add_first(llist *list, todo_entry_t *val)
 	return 1;
 }
 
-void llist_destroy_contents(llist *list)
+void llist_destroy_contents(llist *list)	//destroys contents deeply
 {
 	struct node *n = NULL;
 	
@@ -107,6 +107,22 @@ void llist_destroy_contents(llist *list)
 int isseparator(int c)
 {
 	return c == '|';
+}
+
+void skip_until(FILE *f, int *in_char, char until)
+{
+	while (*in_char != EOF && (char)*in_char != until) *in_char = fgetc(f);
+}
+
+void skip_comment_lines(FILE *f, int *in_char)
+{	/*only works if in_char is '#'
+	skips to the beginning of the next non-comment line or EOF*/
+	while (*in_char != EOF && (char)*in_char == '#')
+	{
+		skip_until(f, in_char, '\n');
+		//now in_char contains newline char or EOF
+		if (*in_char != EOF) *in_char = fgetc(f); //if is probably pointless
+	}
 }
 
 int load_num_8(FILE *f, uint_least8_t* num, int *in_char) //8 bit version
@@ -176,7 +192,7 @@ int load_date(FILE *f, date_t *d, int c)
 	return 0;
 }
 
-size_t load_buffer(FILE *f, char *buffer, int *in_char)
+size_t load_buffer(FILE *f, char buffer[TEXT_MAX_LEN], int *in_char)
 {	/*loads text from file into buffer, until it reaches max size or newline or EOF
 	returns amount of characters loaded, 0 also when given invalid input
 	if given non-NULL in_char then it takes that char as first character and returns last char there*/
@@ -198,13 +214,16 @@ size_t load_buffer(FILE *f, char *buffer, int *in_char)
 }
 
 int load_one_entry(FILE *f, todo_entry_t *entry)
-{	//returns 0 if success, current line should not be comment, otherwise it returns 1
+{	/*loads entry from given file, ignores commented lines (starting with '#')
+	returns 0 if success, -1 if it reached the EOF, otherwise it positive number*/
 	if (!f || !entry) return 1;
 	
 	int c = fgetc(f);
+	skip_comment_lines(f, &c);	//skips commented lines until uncommented or EOF
 	
 	switch(c)
 	{
+		case EOF: return -1;
 		case ' ': entry->status = 0;	//not done
 		break;
 		case 'X': entry->status = 1;	//done
@@ -219,10 +238,12 @@ int load_one_entry(FILE *f, todo_entry_t *entry)
 	if (load_date(f, &entry->created_date, c)) return 1;
 	
 	while (isseparator(c = fgetc(f))); //skipping separators
-	size_t size = load_buffer(f, &entry->text_buffer, &c);
+	size_t size = load_buffer(f, (char*)&entry->text_buffer, &c);
 	
 	//this should be always possible as the length of buffer is TEXT_MAX_SIZE + 1
 	entry->text_buffer[size] = '\0';
+	
+	if (c != '\n') skip_until(f, &c, '\n'); //skips to end of line or EOF
 	
 	return 0;
 }
@@ -231,25 +252,38 @@ int load_entries(llist *list, const char *path)
 {	//loads entries from specified file into linked list (should be empty)
 	//returns 0 if success, non-zero if failure which empties the linked list
 	FILE *f = fopen(path, "r");
-	if (f == NULL) return 1;
+	if (f == NULL) return 1;	//couldn't open file
 	
-	struct node *n = NULL;
 	todo_entry_t *entry = NULL;
+	int status = 0;
 	
-	while (!feof(f))
+	while (!status)
 	{
-		n = malloc(sizeof(struct node));
-		if (n == NULL)
-		{
-			//TODO destroy linked list
-			return 2;
-		}
 		entry = malloc(sizeof(todo_entry_t));
 		if (entry == NULL)
-		{
-			//TODO destroy linked list
-			free(n);
+		{	//entry couldn't get allocated
+			llist_destroy_contents(list);
+			fclose(f);
 			return 2;
+		}
+		
+		if ((status = load_one_entry(f, entry)) > 0)
+		{	//positive return value means something went wrong
+			llist_destroy_contents(list);
+			free(entry);
+			fclose(f);
+			return 3;
+		}
+
+		//printf("status: %d\n", status);
+
+		if (status == -1) free(entry);			//EOF -> entry gets deleted
+		else if (!llist_add_end(list, entry))	//Success -> entry gets added to list
+		{	//adding to list failed
+			llist_destroy_contents(list);
+			free(entry);
+			fclose(f);
+			return 4;
 		}
 	}
 	
@@ -268,24 +302,13 @@ void print_llist(llist *list)
 
 int main()
 {
-	date_t d1 = {15, 7, 1999}, d2 = {13, 9, 2002};
-	todo_entry_t e1 = { .status=0, .created_date={2, 3, 2022}, .deadline=d1 };
-	todo_entry_t e2 = { .status=1, .created_date={1, 1, 2222}, .deadline=d2 };
+	const char *path = "./testfile";
+	llist list = { NULL, NULL };
 	
-	struct node *n1 = malloc(sizeof(struct node));
-	n1->val = &e1;
-	n1->next = NULL;
-	struct node *n2 = malloc(sizeof(struct node));
-	n2->val = &e2;
-	n2->next = NULL;
-	llist list = { .first=NULL, .last=NULL};
+	int out = load_entries(&list, path);
+	if (out) printf("Error: %d\n", out);
+	else print_llist(&list);
 	
-	llist_add_node_end(&list, n1);
-	llist_add_node_first(&list, n2);
-	
-	print_llist(&list);
-	
-	free(n1);
-	free(n2);
+	llist_destroy_contents(&list);
 	return 0;
 }

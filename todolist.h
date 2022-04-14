@@ -62,6 +62,10 @@ void llist_destroy_contents(llist *list);
 //reading file
 int isseparator(int c);
 
+void skip_until(FILE *f, int *in_char, char until);
+
+void skip_comment_lines(FILE *f, int *in_char);
+
 int load_num_8(FILE *f, uint_least8_t* num, int *in_char);
 
 int load_num_16(FILE *f, uint_least16_t* num, int *in_char);
@@ -71,6 +75,8 @@ int load_num_tolerant_8(FILE *f, uint_least8_t* num, int *in_char);
 int load_num_tolerant_16(FILE *f, uint_least16_t* num, int *in_char);
 
 int load_date(FILE *f, date_t* d, int c);
+
+size_t load_buffer(FILE *f, char buffer[TEXT_MAX_LEN], int *in_char);
 
 int load_one_entry(FILE *f, todo_entry_t *entry);
 
