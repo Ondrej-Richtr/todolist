@@ -15,13 +15,12 @@ typedef struct
 	uint_least16_t year;
 } date_t;
 
-//checks if given date has correct month (way of validating dates here)
 inline int is_date_valid(const date_t date)
-{
+{	//checks if given date has correct month (way of validating dates here)
 	return date.month && date.month <= 12;
 }
 
-void print_date(date_t date);
+int write_date(FILE *f, const date_t date);
 
 typedef struct
 {
@@ -33,6 +32,7 @@ typedef struct
 
 void print_todoentry(todo_entry_t entry, int style);
 
+//linked list
 struct node
 {
 	struct node *next;
@@ -64,11 +64,11 @@ int isseparator(int c);
 
 void skip_until(FILE *f, int *in_char, char until);
 
-void skip_comment_lines(FILE *f, int *in_char);
+void skip_comment_blank_lines(FILE *f, int *in_char);
 
-int load_num_8(FILE *f, uint_least8_t* num, int *in_char);
+size_t load_num_8(FILE *f, uint_least8_t* num, int *in_char);
 
-int load_num_16(FILE *f, uint_least16_t* num, int *in_char);
+size_t load_num_16(FILE *f, uint_least16_t* num, int *in_char);
 
 int load_num_tolerant_8(FILE *f, uint_least8_t* num, int *in_char);
 
@@ -81,3 +81,13 @@ size_t load_buffer(FILE *f, char buffer[TEXT_MAX_LEN], int *in_char);
 int load_one_entry(FILE *f, todo_entry_t *entry);
 
 int load_entries(llist *list, const char *path);
+
+//writing to file
+void write_buffer(FILE *f, char* buffer);
+
+int write_one_entry(FILE *f, todo_entry_t *entry);
+
+int write_entries(FILE *f, llist *list);
+
+//cli functionality
+int add_entry_string(llist *list, char* string);
