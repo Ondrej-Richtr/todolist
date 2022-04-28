@@ -6,6 +6,8 @@ int is_date_valid(const date_t date);
 
 
 //definitions:
+
+//date_t
 int write_date(FILE *f, const date_t date)
 {
 	return fprintf(f, "%d. %d. %d", date.day, date.month, date.year);
@@ -27,92 +29,38 @@ void print_todoentry(todo_entry_t entry, int style)
 	//printf("%s\n", entry.text_buffer);
 }
 
-void node_destroy(struct node *n)
-{
-	if (n == NULL) return;
-	
-	free(n->val);
-	free(n);
-}
-
-void llist_add_node_end(llist *list, struct node *n)
-{
-	if (list->last == NULL) list->first = n;
-	else list->last->next = n;
-	
-	list->last = n;
-	n->next = NULL;
-}
-
-void llist_add_node_first(llist *list, struct node *n)
-{
-	n->next = list->first;
-	
-	if (list->last == NULL) list->last = n;
-	list->first = n;
-}
-
-struct node* llist_pop_node_first(llist *list)
-{
-	if (list->first == NULL) return NULL;
-	
-	struct node *out = list->first;
-	if (list->last == out) list->last = NULL;
-	
-	list->first = out->next;
-	
-	return out;
-}
-
-int llist_add_end(llist *list, todo_entry_t *val)
-{
-	if (list == NULL) return 0;
-	
-	struct node *n = malloc(sizeof(struct node));
-	
-	if (n == NULL) return 0;
-	
-	n->next = NULL;
-	n->val = val;
-	llist_add_node_end(list, n);
-	
-	return 1;
-}
-
-int llist_add_first(llist *list, todo_entry_t *val)
-{
-	if (list == NULL) return 0;
-	
-	struct node *n = malloc(sizeof(struct node));
-	
-	if (n == NULL) return 0;
-	
-	n->next = NULL;
-	n->val = val;
-	llist_add_node_first(list, n);
-	
-	return 1;
-}
-
-void llist_destroy_contents(llist *list)	//destroys contents deeply
-{
-	struct node *n = NULL;
-	
-	while ((n = llist_pop_node_first(list)) != NULL)
-	{
-		node_destroy(n);
-	}
-}
-
 //reading functions
 int isseparator(int c)
 {
 	return c == '|';
 }
 
+int isempty(char* str)
+{
+	return !str || !str[0];
+}
+
 void skip_until(FILE *f, int *in_char, char until)
 {
 	while (*in_char != EOF && (char)*in_char != until) *in_char = fgetc(f);
+}
+
+size_t copy_until_sep(size_t max_size, char buffer[max_size + 1], char* source)
+{	/*copies from source as much characters until it reaches max size or end of source
+	puts null char at the end of loaded buffer
+	similar to srcpy_buffer*/
+	if (!source) return 0;
+	
+	size_t index = 0;
+	
+	while (source[index] != '\0' && !isseparator(source[index]) && index < max_size)
+	{
+		buffer[index] = source[index];
+		index++;
+	}
+	
+	buffer[index] = '\0';
+	return index;
 }
 
 size_t readline(FILE *f, size_t max_size, char buffer[max_size + 1])
@@ -239,19 +187,19 @@ int load_date_string(date_t *d, char *str_start)
 	
 	str_end = string_num_end(str_start, &str_start);
 	if (str_end == NULL) return 1;	//failed at loading 1
-	printf("end char: '%c'\n", *str_end);
+	//printf("end char: '%c'\n", *str_end);
 	d->day = (uint8_t)atoi(str_start);
 	str_start = str_end;
 	
 	str_end = string_num_end(str_start, &str_start);
 	if (str_end == NULL) return 2;	//failed at loading 2
-	printf("end char: '%c'\n", *str_end);
+	//printf("end char: '%c'\n", *str_end);
 	d->month = (uint8_t)atoi(str_start);
 	str_start = str_end;
 	
 	str_end = string_num_end(str_start, &str_start);
 	if (str_end == NULL) return 3;	//failed at loading 3
-	printf("end char: '%c'\n", *str_end);
+	//printf("end char: '%c'\n", *str_end);
 	d->year = (uint16_t)atoi(str_start);	
 	
 	return 0;
@@ -288,6 +236,7 @@ void strcpy_buffer(size_t buffer_size, char *buffer, char *source)
 	{	//unoptimized solution but whatever
 		buffer[index] = source[index];
 	}
+	printf("ending index: %u\n", index);
 	buffer[index] = '\0';
 }
 
@@ -455,24 +404,29 @@ int add_entry_string(llist *list, char* string)
 	
 	size_t index = 0;
 	char status = ' ';
-	char *deadline = NULL, *
+	//buffer for deadline number and for text
+	char num_buffer[NUM_BUFFER_SIZE + 1], text_buffer[TEXT_MAX_LEN + 1];
 	
-	if string[0] == 'X'
+	//first letter is checked if it's status
+	if (string[0] == 'X')
 	{
 		index++;
 		status = 'X';
 	}
 	
-	while (string[index] != '\0' && isseparator(string[index]))) index++;
-	
-	//TODO
-	while (string[index] != '\0')
+	//skipping separators
+	while (string[index] != '\0' && isseparator(string[index])) index++;
+
+	//loading deadline
+	if (isdigit(string[index]))
 	{
-		
-		index++;
+		index += 1 + copy_until_sep(NUM_BUFFER_SIZE, num_buffer, string + index);
 	}
 	
-	return 0;
+	//loading text
+	strcpy_buffer(TEXT_MAX_LEN, (char*)text_buffer, string + index);
+	
+	return add_entry_splitted(list, status, NULL, (char*)num_buffer, (char*)text_buffer);
 }
 
 //main things
@@ -481,24 +435,32 @@ void print_llist(llist *list)
 	for (struct node *n = list->first; n != NULL; n = n->next)
 	{
 		print_todoentry(*(n->val), 0);
+		puts("------------");
 	}
 }
 
 int main()
 {
 	char string[129];
-	date_t date = {0, 0, 0};
+	llist list = { NULL, NULL };
 	
 	size_t string_len = readline(stdin, 128, string);
+	string[string_len] = '\0';
 	printf("input: '%s'\n", string);
-	write_date(stdout, date);
-	putchar('\n');
 	
-	load_date_string(&date, string);
-	
-	write_date(stdout, date);
-	putchar('\n');
-	
+	if (add_entry_string(&list, string))
+	{
+		puts("error");
+		llist_destroy_contents(&list);
+		return 1;
+	}
+	if (list.first == NULL) puts("Nothing");
+	else
+	{
+		print_llist(&list);
+	}
+
+	llist_destroy_contents(&list);
 	return 0;
 }
 

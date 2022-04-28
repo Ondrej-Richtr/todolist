@@ -6,6 +6,7 @@
 #include <ctype.h>
 
 #define TEXT_MAX_LEN 64
+#define NUM_BUFFER_SIZE 64
 
 //structures:
 typedef struct
@@ -47,6 +48,7 @@ typedef struct linked_list
 	struct node *last;
 } llist;
 
+//linkedlist.c
 void llist_add_node_end(llist *list, struct node *n);
 
 void llist_add_node_first(llist *list, struct node *n);
@@ -59,6 +61,7 @@ int llist_add_first(llist *list, todo_entry_t *val);
 
 void llist_destroy_contents(llist *list);
 
+//todolist.c
 //reading file
 int isseparator(int c);
 
