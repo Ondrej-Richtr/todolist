@@ -414,16 +414,20 @@ int add_entry_string(llist *list, char* string)
 		status = 'X';
 	}
 	
-	//skipping separators
-	while (string[index] != '\0' && isseparator(string[index])) index++;
+	//skipping separators and spaces
+	while (string[index] != '\0' &&
+		(isspace(string[index]) || isseparator(string[index]))) index++;
 
 	//loading deadline
 	if (isdigit(string[index]))
 	{
-		index += 1 + copy_until_sep(NUM_BUFFER_SIZE, num_buffer, string + index);
+		index += copy_until_sep(NUM_BUFFER_SIZE, num_buffer, string + index);
 	}
 	
 	//loading text
+	//string index now points to either end of string or at separator before text or text
+	if (isseparator(string[index])) index++;
+	//now at end (empty text) or text (non empty)
 	strcpy_buffer(TEXT_MAX_LEN, (char*)text_buffer, string + index);
 	
 	return add_entry_splitted(list, status, NULL, (char*)num_buffer, (char*)text_buffer);
