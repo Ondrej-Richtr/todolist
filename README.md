@@ -1,2 +1,4 @@
 # todolist
-Simple TO-DO list for your terminal
+Terminal based TO-DO list
+
+strictly for my usage and anyone who dares to try it
