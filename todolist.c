@@ -8,27 +8,6 @@ int is_date_valid(const date_t date);
 //definitions:
 
 //date_t
-int write_date(FILE *f, const date_t date)
-{
-	return fprintf(f, "%d. %d. %d", date.day, date.month, date.year);
-}
-
-void print_todoentry(todo_entry_t entry, int style)
-{
-	//ignores style parameter for now
-	if (entry.status) printf("[Y] ");
-	else printf("[N] ");
-	
-	if (is_date_valid(entry.deadline))
-	{
-		write_date(stdout, entry.deadline);
-		printf(" | ");
-	}
-	
-	puts(entry.text_buffer);
-	//printf("%s\n", entry.text_buffer);
-}
-
 //reading functions
 int isseparator(int c)
 {
@@ -398,8 +377,8 @@ int add_entry_splitted(llist *list, char status, char *orig_date, char *dead_dat
 }
 
 int add_entry_string(llist *list, char* string)
-{	//adds entry described by C-style string
-	//returns zero if success
+{	/*adds entry described by C-style string, returns zero if success
+	-1 if bad parameters and failure codes from add_splitted*/
 	if (!list || !string) return -1;
 	
 	size_t index = 0;
@@ -433,7 +412,28 @@ int add_entry_string(llist *list, char* string)
 	return add_entry_splitted(list, status, NULL, (char*)num_buffer, (char*)text_buffer);
 }
 
-//main things
+//outputting
+int write_date(FILE *f, const date_t date)
+{
+	return fprintf(f, "%d. %d. %d", date.day, date.month, date.year);
+}
+
+void print_todoentry(todo_entry_t entry, int style)
+{
+	//ignores style parameter for now
+	if (entry.status) printf("[Y] ");
+	else printf("[N] ");
+	
+	if (is_date_valid(entry.deadline))
+	{
+		write_date(stdout, entry.deadline);
+		printf(" | ");
+	}
+	
+	puts(entry.text_buffer);
+	//printf("%s\n", entry.text_buffer);
+}
+
 void print_llist(llist *list)
 {
 	for (struct node *n = list->first; n != NULL; n = n->next)
@@ -441,56 +441,4 @@ void print_llist(llist *list)
 		print_todoentry(*(n->val), 0);
 		puts("------------");
 	}
-}
-
-int main()
-{
-	char string[129];
-	llist list = { NULL, NULL };
-	
-	size_t string_len = readline(stdin, 128, string);
-	string[string_len] = '\0';
-	printf("input: '%s'\n", string);
-	
-	if (add_entry_string(&list, string))
-	{
-		puts("error");
-		llist_destroy_contents(&list);
-		return 1;
-	}
-	if (list.first == NULL) puts("Nothing");
-	else
-	{
-		print_llist(&list);
-	}
-
-	llist_destroy_contents(&list);
-	return 0;
-}
-
-int main2()
-{
-	const char *path_r = "./longerfile", *path_w = "./newfile", *path_w2 = "./newfile2";
-	llist list = { NULL, NULL };
-	
-	int out = load_entries(&list, path_r);
-	if (out)
-	{
-		printf("Error during reading: %d\n", out);
-		return 1;
-	}
-	
-	print_llist(&list);
-	
-	FILE *file = fopen(path_w, "w");
-	out = write_entries(file, &list);
-	if (out)
-	{
-		printf("Error during writing: %d\n", out);
-		return 1;
-	}
-	
-	llist_destroy_contents(&list);
-	fclose(file);
-	return 0;
 }

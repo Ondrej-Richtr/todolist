@@ -77,3 +77,28 @@ void llist_destroy_contents(llist *list)	//destroys contents deeply
 		node_destroy(n);
 	}
 }
+
+//functions for CLI
+struct node *llist_nth_node(llist *list, size_t n)
+{	//returns pointer to nth node in linked list, indexing from zero
+	//if there is no such node then it returns NULL
+	if (!list) return NULL;
+	
+	struct node *current = list->first;
+	
+	while (n && current) //n is not zero and current is not NULL
+	{
+		n--;
+		current = current->next;
+	}
+	
+	return current;
+}
+
+todo_entry_t *llist_nth_entry(llist *list, size_t n)
+{	//returns pointer to nth entry linked list, indexing from zero
+	//if there is no such entry then it returns NULL
+	struct node *entry_node = llist_nth_node(list, n);
+	if (entry_node) return entry_node->val;
+	return NULL;
+}
