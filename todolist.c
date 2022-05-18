@@ -215,7 +215,7 @@ void strcpy_buffer(size_t buffer_size, char *buffer, char *source)
 	{	//unoptimized solution but whatever
 		buffer[index] = source[index];
 	}
-	printf("ending index: %u\n", index);
+	//printf("ending index: %u\n", index);
 	buffer[index] = '\0';
 }
 
@@ -410,6 +410,31 @@ int add_entry_string(llist *list, char* string)
 	strcpy_buffer(TEXT_MAX_LEN, (char*)text_buffer, string + index);
 	
 	return add_entry_splitted(list, status, NULL, (char*)num_buffer, (char*)text_buffer);
+}
+
+int delete_entry_string(llist *list, char *string)
+{	/*parses input from string and deletes those entries specified by index
+	in string, indexing is from 1, nonvalid index or letters generate errors
+	returns nonzero only for invalid parameters*/
+	if (!list || !string) return -1;
+	
+	size_t i = 0, num = 0;
+	
+	while (string[i] != '\0')
+	{
+		num = (size_t)atoi(string + i);
+		printf("num to delete: %u\n", num);
+		if (!num || llist_delete_nth_entry(list, num - 1))
+		{
+			//TODO handle error
+			puts("error");
+		}
+		puts("deleted");
+		while (string[i] != '\0' && !isseparator(string[i])) i++;
+		while (isseparator(string[i]) || isspace(string[i])) i++;
+	}
+	
+	return 0;
 }
 
 //outputting

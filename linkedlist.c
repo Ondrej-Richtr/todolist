@@ -68,6 +68,21 @@ int llist_add_first(llist *list, todo_entry_t *val)
 	return 1;
 }
 
+void llist_delete_after(llist* list, struct node *prev)
+{	//deletes node after given 'prev' node, if NULL then it deletes the first node
+	struct node *deleted = NULL;
+	if (!prev) deleted = llist_pop_node_first(list);
+	else deleted = prev->next;
+	
+	if (!deleted) return; //nothing to be done
+	
+	//fixes correctness for list->last (list->first should be correct from pop)
+	if (deleted == list->last) list->last = prev;
+	
+	if (prev) prev->next = deleted->next;
+	node_destroy(deleted);
+}
+
 void llist_destroy_contents(llist *list)	//destroys contents deeply
 {
 	struct node *n = NULL;
@@ -101,4 +116,21 @@ todo_entry_t *llist_nth_entry(llist *list, size_t n)
 	struct node *entry_node = llist_nth_node(list, n);
 	if (entry_node) return entry_node->val;
 	return NULL;
+}
+
+int llist_delete_nth_entry(llist *list, size_t n)
+{	//deletes nth entry in linked list, counting from 0
+	//returns 0 if entry deleted, 1 if 'n' out of bounds, -1 if wrong input
+	if (!list) return -1;
+	
+	struct node *prev = NULL;
+	
+	if (n)
+	{
+		if (!(prev = llist_nth_node(list, n - 1)) || !prev->next) return 1;
+	}
+	
+	llist_delete_after(list, prev);
+	
+	return 0;
 }

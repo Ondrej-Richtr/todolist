@@ -63,6 +63,8 @@ struct node *llist_nth_node(llist *list, size_t n);
 
 todo_entry_t *llist_nth_entry(llist *list, size_t n);
 
+int llist_delete_nth_entry(llist *list, size_t n);
+
 //todolist.c
 //reading file
 int isseparator(int c);
@@ -102,6 +104,8 @@ int write_entries(FILE *f, llist *list);
 int add_entry_string(llist *list, char* string);
 
 int add_entry_splitted(llist *list, char status, char *orig_date, char *dead_date, char *text);
+
+int delete_entry_string(llist *list, char *string);
 
 //outputting
 int write_date(FILE *f, const date_t date);

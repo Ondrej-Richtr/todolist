@@ -2,7 +2,7 @@
 
 
 //main things
-int main()
+int main2()
 {
 	char string[129];
 	llist list = { NULL, NULL };
@@ -27,29 +27,20 @@ int main()
 	return 0;
 }
 
-int main2()
+int main()
 {
-	const char *path_r = "./longerfile", *path_w = "./newfile", *path_w2 = "./newfile2";
 	llist list = { NULL, NULL };
+
+	add_entry_string(&list, "X|12.4.1982|nejaky text");
+	add_entry_string(&list, "|12.10.1999|nejaky text cislo dva");
+	add_entry_string(&list, "X|12.19.1999|a taky cislo tri");
+	print_llist(&list);
+	puts("after:");
 	
-	int out = load_entries(&list, path_r);
-	if (out)
-	{
-		printf("Error during reading: %d\n", out);
-		return 1;
-	}
-	
+	int del_err = delete_entry_string(&list, "0");
+	printf("Returned err: %d\n", del_err);
 	print_llist(&list);
 	
-	FILE *file = fopen(path_w, "w");
-	out = write_entries(file, &list);
-	if (out)
-	{
-		printf("Error during writing: %d\n", out);
-		return 1;
-	}
-	
 	llist_destroy_contents(&list);
-	fclose(file);
 	return 0;
 }
