@@ -27,7 +27,7 @@ int main2()
 	return 0;
 }
 
-int main()
+int main3()
 {
 	llist list = { NULL, NULL };
 
@@ -42,5 +42,14 @@ int main()
 	print_llist(&list);
 	
 	llist_destroy_contents(&list);
+	return 0;
+}
+
+int main()
+{
+	FILE *f = stdin;
+	const char *path = "./writefile";
+	int err = interactive_mode(f, path);
+	if (err) printf("Interactive err: %d\n", err);
 	return 0;
 }

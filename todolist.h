@@ -7,6 +7,7 @@
 
 #define TEXT_MAX_LEN 64
 #define NUM_BUFFER_SIZE 64
+#define CLI_LINE_MAX_LEN 1024
 
 //structures:
 typedef struct
@@ -101,11 +102,15 @@ int write_one_entry(FILE *f, todo_entry_t *entry);
 int write_entries(FILE *f, llist *list);
 
 //cli functionality
+enum CmdType{ print_c, add_c, del_c };
+
 int add_entry_string(llist *list, char* string);
 
 int add_entry_splitted(llist *list, char status, char *orig_date, char *dead_date, char *text);
 
 int delete_entry_string(llist *list, char *string);
+
+int interactive_mode(FILE *input, const char *todo_file_path);
 
 //outputting
 int write_date(FILE *f, const date_t date);

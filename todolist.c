@@ -43,17 +43,18 @@ size_t copy_until_sep(size_t max_size, char buffer[max_size + 1], char* source)
 }
 
 size_t readline(FILE *f, size_t max_size, char buffer[max_size + 1])
-{	/*reads single line from 'f' until newline char or EOF
-	puts null character at correct end of buffer
+{	/*reads single line from 'f' until newline char or EOF,
+	if the input is larger than buffer it ONLY stops storing it (unlike load_buffer),
+	puts null character in buffer at the end of loaded string
 	return number of characters loaded (excluding null char)*/
 	if (!f) return 0;
 	
 	int c;
 	size_t index = 0;
 	
-	while ((c = fgetc(f)) != EOF && c != '\n' && index < max_size)
+	while ((c = fgetc(f)) != EOF && c != '\n')
 	{
-		buffer[index++] = (char)c;
+		if (index < max_size) buffer[index++] = (char)c;
 	}
 	
 	buffer[index] = '\0';
@@ -184,7 +185,7 @@ int load_date_string(date_t *d, char *str_start)
 	return 0;
 }
 
-size_t load_buffer(FILE *f, char buffer[TEXT_MAX_LEN], int *in_char)
+size_t load_buffer(FILE *f, char buffer[TEXT_MAX_LEN], int *in_char) //TODO probably useless - readline is better
 {	/*loads text from file into buffer, until it reaches max size or newline or EOF
 	returns amount of characters loaded, 0 also when given invalid input
 	if given non-NULL in_char then it takes that char as first character and returns last char there*/
@@ -435,6 +436,74 @@ int delete_entry_string(llist *list, char *string)
 	}
 	
 	return 0;
+}
+
+int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
+{	//TODO err output?
+	switch (type)
+	{
+		case print_c: print_llist(list);
+		break;
+		case add_c: return add_entry_string(list, buffer);
+		case del_c: return delete_entry_string(list, buffer);
+		default: return 1;
+	}
+	return 0;
+}
+
+int parse_inter_cmd(FILE *input, llist *list, char buffer[CLI_LINE_MAX_LEN + 1])
+{	/*parses which command to be done from buffer and if needed loads
+	more lines from the input, then executes correct cli function
+	returns 1 if wrong input or other non-zero if error*/
+	char *noncmd_start = NULL;
+	
+	return add_entry_string(list, (char*)buffer);
+}
+
+int interactive_mode(FILE *input, const char *todo_file_path)
+{	/*reads lines from input until EOF and interprets them as cli commands
+	todo_file is_path is the path to file where current todo list entries
+	are possibly stored and where the result will be written*/
+	
+	//TODO interactive mode
+	llist list = { NULL, NULL };
+	if (load_entries(input, &list, todo_file_path))
+	{
+		//TODO err
+		return 1;
+	}
+	
+	char line_buffer[CLI_LINE_MAX_LEN + 1] = { 'x' };
+	size_t line_len = 0;
+	int parse_err = 0;
+	
+	while ((line_len = readline(input, CLI_LINE_MAX_LEN, line_buffer)))
+	{	//also means that loaded line is not an empty string
+		parse_err = parse_inter_cmd(&list, line_buffer);
+		printf("Parse err val: %d\n", parse_err);
+	}
+	
+	print_llist(&list);
+	
+	FILE *out_file = fopen(todo_file_path, "w");
+	if (!out_file)
+	 {
+		//TODO err
+		//printf("Opening file at: '%s' failed!\n", write_path);
+		llist_destroy_contents(&list);
+		return 2;
+	 }
+	
+	int write_err = write_entries(out_file, &list);
+	
+	/*TODO err
+	if (write_err)
+	{
+		printf("Writing entries to file failed! Err: %d\n", write_err);
+	}*/
+	fclose(out_file);
+	llist_destroy_contents(&list);
+	return write_err;
 }
 
 //outputting
