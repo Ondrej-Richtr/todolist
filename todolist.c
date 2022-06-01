@@ -4,346 +4,10 @@
 //declaratons:
 int is_date_valid(const date_t date);
 
+void date_null(date_t *date);
+
 
 //definitions:
-
-//date_t
-//reading functions
-int isseparator(int c)
-{
-	return c == '|';
-}
-
-int isempty(char* str)
-{
-	return !str || !str[0];
-}
-
-void skip_until(FILE *f, int *in_char, char until)
-{
-	while (*in_char != EOF && (char)*in_char != until) *in_char = fgetc(f);
-}
-
-size_t copy_until_sep(size_t max_size, char buffer[max_size + 1], char* source)
-{	/*copies from source as much characters until it reaches max size or end of source
-	puts null char at the end of loaded buffer
-	similar to srcpy_buffer*/
-	if (!source) return 0;
-	
-	size_t index = 0;
-	
-	while (source[index] != '\0' && !isseparator(source[index]) && index < max_size)
-	{
-		buffer[index] = source[index];
-		index++;
-	}
-	
-	buffer[index] = '\0';
-	return index;
-}
-
-size_t readline(FILE *f, size_t max_size, char buffer[max_size + 1])
-{	/*reads single line from 'f' until newline char or EOF,
-	if the input is larger than buffer it ONLY stops storing it (unlike load_buffer),
-	puts null character in buffer at the end of loaded string
-	return number of characters loaded (excluding null char)*/
-	if (!f) return 0;
-	
-	int c;
-	size_t index = 0;
-	
-	while ((c = fgetc(f)) != EOF && c != '\n')
-	{
-		if (index < max_size) buffer[index++] = (char)c;
-	}
-	
-	buffer[index] = '\0';
-	return index;
-}
-
-void skip_comment_blank_lines(FILE *f, int *in_char)
-{	/*only works if in_char is '#' or '\n'
-	skips to the beginning of the next non-comment non-empty line or EOF*/
-	while (*in_char != EOF && ((char)*in_char == '#' || (char)*in_char == '\n'))
-	{
-		skip_until(f, in_char, '\n');
-		//now in_char contains newline char or EOF
-		if (*in_char != EOF) *in_char = fgetc(f); //if is probably pointless
-	}
-}
-
-size_t load_num_8(FILE *f, uint_least8_t* num, int *in_char) //8 bit version
-{	/*expects first (given) character to be already number (digit)
-	only works with unsigned numbers, returns numbers of digits that it read*/
-	if (!f || !num || !in_char) return 0;
-	
-	int c = *in_char;
-	size_t count = 0;
-	
-	while (c != EOF && c >= '0' && c <= '9')
-	{
-		*num *= 10;
-		*num += (uint_least8_t)(c - '0');
-		c = fgetc(f);
-		count++;
-	}
-	
-	*in_char = c;
-	return count;
-}
-
-size_t load_num_16(FILE *f, uint_least16_t* num, int *in_char) //16 bit version
-{	/*expects first (given) character to be already number (digit)
-	only works with unsigned numbers, returns numbers of digits that it read*/
-	if (!f || !num || !in_char) return 0;
-	
-	int c = *in_char;
-	size_t count = 0;
-	
-	while (c != EOF && c >= '0' && c <= '9')
-	{
-		*num *= 10;
-		*num += (uint_least16_t)(c - '0');
-		c = fgetc(f);
-		count++;
-	}
-	
-	*in_char = c;
-	return count;
-}
-
-int load_num_tolerant_8(FILE *f, uint_least8_t* num, int *in_char) //8 bit version
-{	//tolerates whitespaces at the beginning of the number
-	//returns amount of digits that it read
-	if (!f || !num || !in_char) return -1;
-	
-	while (*in_char != EOF && isspace(*in_char)) *in_char = fgetc(f);
-	
-	return load_num_8(f, num, in_char);
-}
-
-int load_num_tolerant_16(FILE *f, uint_least16_t* num, int *in_char) //16 bit version
-{	//tolerates whitespaces at the beginning of the number
-	//returns amount of digits that it read
-	if (!f || !num || !in_char) return -1;
-	
-	while (*in_char != EOF && isspace(*in_char)) *in_char = fgetc(f);
-	
-	return load_num_16(f, num, in_char);
-}
-
-char* string_num_end(char *num_start, char **new_start)
-{	//find first number in given string 'num_start' and returns where this number end
-	//if new_start is not NULL then stores start of this number there
-	if (!num_start) return NULL;
-	
-	while (*num_start != '\0' && !isdigit(*num_start)) num_start++;
-	
-	if (new_start != NULL) *new_start = num_start; //setting where number starts
-	
-	while (*num_start != '\0' && isdigit(*num_start)) num_start++;
-	return num_start;
-}
-
-int load_date(FILE *f, date_t *d, int c)
-{	//loads from stream 'f' date to given 'd', first char given as 'c'
-	//returns nonzero if error occurred
-	if (!f || !d) return 1;
-	
-	if (!load_num_tolerant_8(f, &(d->day), &c)) return -1;
-	c = fgetc(f);
-	if (!load_num_tolerant_8(f, &(d->month), &c)) return -1;
-	c = fgetc(f);
-	if (!load_num_tolerant_16(f, &(d->year), &c)) return -1;
-	return 0;
-}
-
-int load_date_string(date_t *d, char *str_start)
-{	//loads date from given string, returns non-null if not all numbers were loaded
-	if (!d || !str_start) return -1;
-	
-	char *str_end = NULL;
-	int num = 0;
-	
-	str_end = string_num_end(str_start, &str_start);
-	if (str_end == NULL) return 1;	//failed at loading 1
-	//printf("end char: '%c'\n", *str_end);
-	d->day = (uint8_t)atoi(str_start);
-	str_start = str_end;
-	
-	str_end = string_num_end(str_start, &str_start);
-	if (str_end == NULL) return 2;	//failed at loading 2
-	//printf("end char: '%c'\n", *str_end);
-	d->month = (uint8_t)atoi(str_start);
-	str_start = str_end;
-	
-	str_end = string_num_end(str_start, &str_start);
-	if (str_end == NULL) return 3;	//failed at loading 3
-	//printf("end char: '%c'\n", *str_end);
-	d->year = (uint16_t)atoi(str_start);	
-	
-	return 0;
-}
-
-size_t load_buffer(FILE *f, char buffer[TEXT_MAX_LEN], int *in_char) //TODO probably useless - readline is better
-{	/*loads text from file into buffer, until it reaches max size or newline or EOF
-	returns amount of characters loaded, 0 also when given invalid input
-	if given non-NULL in_char then it takes that char as first character and returns last char there*/
-	if (!f || !buffer) return 0;
-	
-	size_t count = 0;
-	int c;
-	if (in_char == NULL) c = fgetc(f);
-	else c = *in_char;
-	
-	while (c != EOF && c != '\n' && count < TEXT_MAX_LEN)
-	{
-		buffer[count++] = (char)c;
-		c = fgetc(f);
-	}
-	
-	if (in_char != NULL)*in_char = c;
-	return count;
-}
-
-void strcpy_buffer(size_t buffer_size, char *buffer, char *source)
-{	//copies content of source string into buffer of given size + 1 (null char)
-	//does nothing if given invalid pointers
-	if (!buffer || !source) return;
-	
-	size_t index = 0;
-	for (; index < buffer_size && source[index] != '\0'; index++)
-	{	//unoptimized solution but whatever
-		buffer[index] = source[index];
-	}
-	//printf("ending index: %u\n", index);
-	buffer[index] = '\0';
-}
-
-int load_one_entry(FILE *f, todo_entry_t *entry)
-{	/*loads entry from given file, ignores commented lines (starting with '#')
-	returns 0 if success, -1 if it reached the EOF, otherwise it positive number*/
-	if (!f || !entry) return 1;
-	
-	int c = fgetc(f);
-	skip_comment_blank_lines(f, &c);	//skips commented lines and empty lines
-	
-	switch(c)
-	{
-		case EOF: return -1;
-		case ' ': entry->status = 0;	//not done
-		break;
-		case 'X': entry->status = 1;	//done
-		break;
-		default: return 1;				//otherwise
-	}
-
-	while (isseparator(c = fgetc(f))); //skipping separators
-	if (load_date(f, &entry->deadline, c)) return 1;
-	
-	while (isseparator(c = fgetc(f))); //skipping separators
-	if (load_date(f, &entry->created_date, c)) return 1;
-	
-	while (isseparator(c = fgetc(f))); //skipping separators
-	size_t size = load_buffer(f, (char*)&entry->text_buffer, &c);
-	
-	//this should be always possible as the length of buffer is TEXT_MAX_SIZE + 1
-	entry->text_buffer[size] = '\0';
-	
-	if (c != '\n') skip_until(f, &c, '\n'); //skips to end of line or EOF
-	
-	return 0;
-}
-
-int load_entries(llist *list, const char *path)
-{	//loads entries from specified file into linked list (should be empty)
-	//returns 0 if success, non-zero if failure which empties the linked list
-	FILE *f = fopen(path, "r");
-	if (f == NULL) return 1;	//couldn't open file
-	
-	todo_entry_t *entry = NULL;
-	int status = 0;
-	
-	while (!status)
-	{
-		entry = malloc(sizeof(todo_entry_t));
-		if (entry == NULL)
-		{	//entry couldn't get allocated
-			llist_destroy_contents(list);
-			fclose(f);
-			return 2;
-		}
-		
-		if ((status = load_one_entry(f, entry)) > 0)
-		{	//positive return value means something went wrong
-			llist_destroy_contents(list);
-			free(entry);
-			fclose(f);
-			return 3;
-		}
-
-		//printf("status: %d\n", status);
-
-		if (status == -1) free(entry);			//EOF -> entry gets deleted
-		else if (!llist_add_end(list, entry))	//Success -> entry gets added to list
-		{	//adding to list failed
-			llist_destroy_contents(list);
-			free(entry);
-			fclose(f);
-			return 4;
-		}
-	}
-	
-	fclose(f);
-	return 0;
-}
-
-//writing functions
-void write_buffer(FILE *f, char* buffer)
-{
-	for (size_t index = 0; index < TEXT_MAX_LEN && buffer[index]; index++)
-		fputc(buffer[index], f);
-}
-
-int write_one_entry(FILE *f, todo_entry_t *entry)
-{
-	if (!f || !entry) return 1;
-	
-	switch (entry->status)
-	{
-		case 0: fputc(' ', f);
-		break;
-		default: fputc('X', f);	//usually 1
-		break;
-	}
-	
-	fputc('|', f);
-	if (write_date(f, entry->deadline) < 0) return 2;
-	fputc('|', f);
-	if (write_date(f, entry->created_date) < 0) return 3;
-	fputc('|', f);
-	write_buffer(f, (char*)&entry->text_buffer);
-	fputc('\n', f);
-	
-	return 0;
-}
-
-int write_entries(FILE *f, llist *list)
-{
-	int out = 0;
-	if (!f || !list) return 1;
-	
-	for (struct node *n = list->first; n != NULL; n = n->next)
-	{
-		if (out = write_one_entry(f, n->val))
-		{
-			//printf("err: %d\n ", out);
-			return 2;
-		}
-	}
-	
-	return 0;
-}
 
 //cli funcionality
 int add_entry_splitted(llist *list, char status, char *orig_date, char *dead_date, char *text)
@@ -354,12 +18,15 @@ int add_entry_splitted(llist *list, char status, char *orig_date, char *dead_dat
 	entry->status = 0;
 	if (status == 'X') entry->status = 1;
 	
-	if (dead_date && load_date_string(&entry->deadline, dead_date))
+	if (!dead_date) date_null(&entry->deadline);
+	else if (load_date_string(&entry->deadline, dead_date))
 	{
 		free(entry);
 		return 2;
 	}
-	if (orig_date && load_date_string(&entry->created_date, orig_date))
+	
+	if (!orig_date) date_null(&entry->created_date);
+	else if (load_date_string(&entry->created_date, orig_date))
 	{
 		free(entry);
 		return 3;
@@ -385,7 +52,7 @@ int add_entry_string(llist *list, char* string)
 	size_t index = 0;
 	char status = ' ';
 	//buffer for deadline number and for text
-	char num_buffer[NUM_BUFFER_SIZE + 1], text_buffer[TEXT_MAX_LEN + 1];
+	char num_buffer[NUM_BUFFER_SIZE + 1] = { 0 }, text_buffer[TEXT_MAX_LEN + 1] = { 0 };
 	
 	//first letter is checked if it's status
 	if (string[0] == 'X')
@@ -416,21 +83,28 @@ int add_entry_string(llist *list, char* string)
 int delete_entry_string(llist *list, char *string)
 {	/*parses input from string and deletes those entries specified by index
 	in string, indexing is from 1, nonvalid index or letters generate errors
-	returns nonzero only for invalid parameters*/
+	returns nonzero only for invalid parameters, indicies are splitted by separators*/
 	if (!list || !string) return -1;
 	
-	size_t i = 0, num = 0;
+	size_t i = 0, num = 0, deleted = 0, last = 0;
 	
 	while (string[i] != '\0')
 	{
 		num = (size_t)atoi(string + i);
-		printf("num to delete: %u\n", num);
-		if (!num || llist_delete_nth_entry(list, num - 1))
+		//printf("num to delete: %u\n", num);
+		
+		if (!num || num <= last || num < deleted + 1
+			|| llist_delete_nth_entry(list, num - 1 - deleted))
 		{
-			//TODO handle error
-			puts("error");
+			fprintf(stderr, "Error: Wrong index '%u' specified to be deleted!\n", num);
 		}
-		puts("deleted");
+		else //so we can track how many was successfuly deleted
+		{
+			deleted++;
+			last = num;
+		}
+		
+		//skipping to the next number to load
 		while (string[i] != '\0' && !isseparator(string[i])) i++;
 		while (isseparator(string[i]) || isspace(string[i])) i++;
 	}
@@ -451,13 +125,56 @@ int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 	return 0;
 }
 
+int parse_cmd_type(char *cmd, enum CmdType *type_ptr)
+{	//returns zero if not supported type, otherwise returns 1
+	//and fills type_ptr with correct type
+
+	//if (!cmd || !type_ptr) return 0;
+	if (!strcmp("print", cmd))	*type_ptr = print_c;
+	else if (!strcmp("add", cmd)) *type_ptr = add_c;
+	else if (!strcmp("delete", cmd)) *type_ptr = del_c;
+	else return 0;
+	return 1;
+}
+
 int parse_inter_cmd(FILE *input, llist *list, char buffer[CLI_LINE_MAX_LEN + 1])
 {	/*parses which command to be done from buffer and if needed loads
 	more lines from the input, then executes correct cli function
 	returns 1 if wrong input or other non-zero if error*/
 	char *noncmd_start = NULL;
+	size_t index = 0, cmd_end = 0;
 	
-	return add_entry_string(list, (char*)buffer);
+	//skipping to the end of first word
+	while (buffer[index] && !isspace(buffer[index])) index++;
+	cmd_end = index;
+	
+	//skipping whitespaces
+	while (buffer[index] && isspace(buffer[index])) index++;
+	
+	enum CmdType type;
+	buffer[cmd_end] = '\0'; //splitting command string from the rest
+	
+	if (!parse_cmd_type((char*)buffer, &type))
+	{
+		//TODO err
+		return 1;
+	}
+	
+	//reading next line if more input needed
+	if (!buffer[index] && type != print_c)
+	{
+		index = 0;
+		//amount of loaded chars not needed
+		readline(input, CLI_LINE_MAX_LEN, buffer);
+	}
+	
+	if (do_inter_cmd(list, type, (char*)buffer + index))
+	{
+		//TODO err
+		return 2;
+	}
+	
+	return 0;
 }
 
 int interactive_mode(FILE *input, const char *todo_file_path)
@@ -467,7 +184,7 @@ int interactive_mode(FILE *input, const char *todo_file_path)
 	
 	//TODO interactive mode
 	llist list = { NULL, NULL };
-	if (load_entries(input, &list, todo_file_path))
+	if (load_entries(&list, todo_file_path))
 	{
 		//TODO err
 		return 1;
@@ -479,12 +196,10 @@ int interactive_mode(FILE *input, const char *todo_file_path)
 	
 	while ((line_len = readline(input, CLI_LINE_MAX_LEN, line_buffer)))
 	{	//also means that loaded line is not an empty string
-		parse_err = parse_inter_cmd(&list, line_buffer);
-		printf("Parse err val: %d\n", parse_err);
+		parse_err = parse_inter_cmd(input, &list, line_buffer);
+		//printf("Parse err val: %d\n", parse_err);
 	}
-	
-	print_llist(&list);
-	
+
 	FILE *out_file = fopen(todo_file_path, "w");
 	if (!out_file)
 	 {
@@ -507,11 +222,6 @@ int interactive_mode(FILE *input, const char *todo_file_path)
 }
 
 //outputting
-int write_date(FILE *f, const date_t date)
-{
-	return fprintf(f, "%d. %d. %d", date.day, date.month, date.year);
-}
-
 void print_todoentry(todo_entry_t entry, int style)
 {
 	//ignores style parameter for now
@@ -533,6 +243,6 @@ void print_llist(llist *list)
 	for (struct node *n = list->first; n != NULL; n = n->next)
 	{
 		print_todoentry(*(n->val), 0);
-		puts("------------");
+		//puts("------------");
 	}
 }
