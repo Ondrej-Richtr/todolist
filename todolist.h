@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <ctype.h>
 #include <string.h>
+#include <time.h>
 
 #define TEXT_MAX_LEN 64
 #define NUM_BUFFER_SIZE 64
@@ -37,6 +38,11 @@ typedef struct
 	date_t deadline;					//deadline for this entry
 	char text_buffer[TEXT_MAX_LEN + 1];	//description of entry, +1 for NULL char
 } todo_entry_t;
+
+inline int is_todoentry_valid(todo_entry_t *entry)
+{
+	return entry->text_buffer[0] || is_date_valid(entry->deadline);
+}
 
 //linked list
 struct node
@@ -114,11 +120,11 @@ int write_entries(FILE *f, llist *list);
 
 //todolist.c
 //cli functionality
-enum CmdType{ print_c, add_c, del_c };
+enum CmdType{ help_c, print_c, add_c, del_c };
 
 int add_entry_string(llist *list, char* string);
 
-int add_entry_splitted(llist *list, char status, char *orig_date, char *dead_date, char *text);
+int add_entry_splitted(llist *list, char status, date_t orig_date, char *dead_date, char *text);
 
 int delete_entry_string(llist *list, char *string);
 
@@ -127,6 +133,8 @@ int delete_entry_string(llist *list, char *string);
 int interactive_mode(FILE *input, const char *todo_file_path);
 
 //outputting
+void print_help();
+
 void print_todoentry(todo_entry_t entry, int style);
 
 void print_llist(llist *list);

@@ -11,6 +11,7 @@ void write_buffer(FILE *f, char* buffer)
 int write_date(FILE *f, const date_t date)
 {
 	return fprintf(f, "%d. %d. %d", date.day, date.month, date.year);
+	//return 0;
 }
 
 int write_one_entry(FILE *f, todo_entry_t *entry)
@@ -37,16 +38,20 @@ int write_one_entry(FILE *f, todo_entry_t *entry)
 }
 
 int write_entries(FILE *f, llist *list)
-{
-	int out = 0;
-	if (!f || !list) return 1;
+{	/*writes entries from linked list into given file
+	returns non-zero if error and prints err msg*/
+	//if (!f || !list) return -1; //useless probably
+	int err_write = 0;
 	
 	for (struct node *n = list->first; n != NULL; n = n->next)
 	{
-		if (out = write_one_entry(f, n->val))
-		{
-			//printf("err: %d\n ", out);
-			return 2;
+		if (err_write = write_one_entry(f, n->val))
+		{	//err_write value gets ignored
+			//same error message as in add_entry_splitted:
+			fprintf(stderr, "Err: Failed to write following entry into the todo file!\n");
+			fprintf(stderr, "The entry: ");
+			print_todoentry(*(n->val), 0);
+			return 1;
 		}
 	}
 	

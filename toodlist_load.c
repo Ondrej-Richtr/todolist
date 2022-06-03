@@ -227,14 +227,14 @@ int load_one_entry(FILE *f, todo_entry_t *entry)
 		break;
 		case 'X': entry->status = 1;	//done
 		break;
-		default: return 1;				//otherwise
+		default: return 2;				//otherwise
 	}
 
 	while (isseparator(c = fgetc(f))); //skipping separators
-	if (load_date(f, &entry->deadline, c)) return 1;
+	if (load_date(f, &entry->deadline, c)) return 3;
 	
 	while (isseparator(c = fgetc(f))); //skipping separators
-	if (load_date(f, &entry->created_date, c)) return 1;
+	if (load_date(f, &entry->created_date, c)) return 4;
 	
 	while (isseparator(c = fgetc(f))); //skipping separators
 	size_t size = load_buffer(f, (char*)&entry->text_buffer, &c);
@@ -251,8 +251,12 @@ int load_entries(llist *list, const char *path)
 {	//loads entries from specified file into linked list (should be empty)
 	//returns 0 if success, non-zero if failure which empties the linked list
 	FILE *f = fopen(path, "r");
-	if (f == NULL) return 1;	//couldn't open file
-	
+	if (f == NULL) //couldn't open file
+	{
+		fprintf(stderr, "Err: Couldn't read todo file at path: '%s'!\n", path);
+		return 1;
+	}
+		
 	todo_entry_t *entry = NULL;
 	int status = 0;
 	
@@ -261,6 +265,7 @@ int load_entries(llist *list, const char *path)
 		entry = malloc(sizeof(todo_entry_t));
 		if (entry == NULL)
 		{	//entry couldn't get allocated
+			fprintf(stderr, "Err: Couldn't allocate memory of %u bytes!\n", sizeof(todo_entry_t));
 			llist_destroy_contents(list);
 			fclose(f);
 			return 2;
@@ -268,17 +273,21 @@ int load_entries(llist *list, const char *path)
 		
 		if ((status = load_one_entry(f, entry)) > 0)
 		{	//positive return value means something went wrong
+			//TODO there could be more detailed error messages
+			fprintf(stderr, "Err: Loading of one specific todo entry failed! Probably wrong format.\n");
 			llist_destroy_contents(list);
 			free(entry);
 			fclose(f);
 			return 3;
 		}
 
-		//printf("status: %d\n", status);
-
 		if (status == -1) free(entry);			//EOF -> entry gets deleted
 		else if (!llist_add_end(list, entry))	//Success -> entry gets added to list
 		{	//adding to list failed
+			//same error message as in add_entry_splitted:
+			fprintf(stderr, "Err: Failed to add following entry into the list!\n");
+			fprintf(stderr, "The entry: ");
+			print_todoentry(*entry, 0);
 			llist_destroy_contents(list);
 			free(entry);
 			fclose(f);
