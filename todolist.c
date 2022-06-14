@@ -114,6 +114,37 @@ int add_entry_string(llist *list, char* string)
 	return add_entry_splitted(list, status, orig_date, (char*)num_buffer, (char*)text_buffer);
 }
 
+int llist_asc_map(llist *list, char *string, int(*func)(llist*, size_t))
+{
+	if (!list || !string || !func) return -1;
+	
+	size_t i = 0, num = 0, deleted = 0, last = 0;
+	
+	while (string[i] != '\0')
+	{
+		num = (size_t)atoi(string + i);
+		//printf("num to delete: %u\n", num);
+		
+		if (!num || num <= last || num < deleted + 1) //when index is zero or not in ascending order
+		{
+			if (num && num <= last) fprintf(stderr, "Err: Wrong index '%u', deleted indices must be in ascending order!\n", num);
+			else fprintf(stderr, "Err: Wrong index '%u' specified to be deleted!\n", num);
+		}
+		//func shoould print it's own error msg when something goes wrong!
+		else if (!func(list, num - 1 - deleted)) //so we can track how many was successfuly deleted
+		{
+			deleted++;
+			last = num;
+		}
+		
+		//skipping to the next number to load
+		while (string[i] != '\0' && !isseparator(string[i])) i++;
+		while (isseparator(string[i]) || isspace(string[i])) i++;
+	}
+	
+	return 0;
+}
+
 int delete_entry_string(llist *list, char *string)
 {	/*parses input from string and deletes those entries specified by index
 	in string, indexing is from 1, nonvalid index or letters generate errors
@@ -130,7 +161,7 @@ int delete_entry_string(llist *list, char *string)
 		if (!num || num <= last || num < deleted + 1
 			|| llist_delete_nth_entry(list, num - 1 - deleted))
 		{
-			if (num <= last) fprintf(stderr, "Err: Wrong index '%u', deleted indices must be in ascending order!\n", num);
+			if (num && num <= last) fprintf(stderr, "Err: Wrong index '%u', deleted indices must be in ascending order!\n", num);
 			else fprintf(stderr, "Err: Wrong index '%u' specified to be deleted!\n", num);
 		}
 		else //so we can track how many was successfuly deleted
@@ -156,10 +187,12 @@ int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 	{
 		case help_c: print_help();
 		break;
-		case print_c: print_llist(list);
+		case print_c: print_llist(list, 1);
 		break;
 		case add_c: return add_entry_string(list, buffer);
-		case del_c: return delete_entry_string(list, buffer);
+		//TODO different delete function
+		case del_c: return llist_asc_map(list, buffer, llist_delete_nth_entry);
+		//case del_c: return delete_entry_string(list, buffer);
 		default: fprintf(stderr, "Err: Wrong command type specified '%d' in command caller!\n", type);
 		return 1;
 	}
@@ -273,25 +306,28 @@ void print_help()
 
 void print_todoentry(todo_entry_t entry, int style)
 {
-	//ignores style parameter for now
-	if (entry.status) printf("[Y] ");
-	else printf("[N] ");
-	
-	if (is_date_valid(entry.deadline))
+	//TODO style
+	if (style)
 	{
-		write_date(stdout, entry.deadline);
-		printf(" | ");
+		if (entry.status) printf("[Y] ");
+		else printf("[N] ");
+		
+		if (is_date_valid(entry.deadline))
+		{
+			write_date(stdout, entry.deadline);
+			printf(" | ");
+		}
 	}
 	
 	puts(entry.text_buffer);
 }
 
-void print_llist(llist *list)
+void print_llist(llist *list, int style)
 {
 	size_t num = 1;
 	for (struct node *n = list->first; n != NULL; n = n->next)
 	{
-		printf("%u\t", num++);
-		print_todoentry(*(n->val), 0);
+		if (style) printf("%u\t", num++);
+		print_todoentry(*(n->val), style);
 	}
 }

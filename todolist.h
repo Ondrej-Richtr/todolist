@@ -126,6 +126,8 @@ int add_entry_string(llist *list, char* string);
 
 int add_entry_splitted(llist *list, char status, date_t orig_date, char *dead_date, char *text);
 
+int llist_asc_map(llist *list, char *string, int(*func)(llist*, size_t));
+
 int delete_entry_string(llist *list, char *string);
 
 //TODO clear entries (done, undone, all)
@@ -137,4 +139,4 @@ void print_help();
 
 void print_todoentry(todo_entry_t entry, int style);
 
-void print_llist(llist *list);
+void print_llist(llist *list, int style);

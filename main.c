@@ -20,7 +20,7 @@ int main2()
 	if (list.first == NULL) puts("Nothing");
 	else
 	{
-		print_llist(&list);
+		print_llist(&list, 1);
 	}
 
 	llist_destroy_contents(&list);
@@ -34,12 +34,12 @@ int main3()
 	add_entry_string(&list, "X|12.4.1982|nejaky text");
 	add_entry_string(&list, "|12.10.1999|nejaky text cislo dva");
 	add_entry_string(&list, "X|12.19.1999|a taky cislo tri");
-	print_llist(&list);
+	print_llist(&list, 1);
 	puts("after:");
 	
 	int del_err = delete_entry_string(&list, "0");
 	printf("Returned err: %d\n", del_err);
-	print_llist(&list);
+	print_llist(&list, 1);
 	
 	llist_destroy_contents(&list);
 	return 0;
