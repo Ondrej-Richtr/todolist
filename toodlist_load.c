@@ -16,15 +16,15 @@ void skip_until(FILE *f, int *in_char, char until)
 	while (*in_char != EOF && (char)*in_char != until) *in_char = fgetc(f);
 }
 
-size_t copy_until_sep(size_t max_size, char buffer[max_size + 1], char* source)
-{	/*copies from source as much characters until it reaches max size or end of source
-	puts null char at the end of loaded buffer
-	similar to srcpy_buffer*/
+size_t copy_until_delimiter(size_t max_size, char buffer[max_size + 1], const char* source, int(*delim)(int))
+{	/*copies from source as much characters until delim. function returns true
+	or it reaches max size or end of source
+	puts null char at the end of loaded buffer, similar to srcpy_buffer*/
 	if (!source) return 0;
 	
 	size_t index = 0;
 	
-	while (source[index] != '\0' && !isseparator(source[index]) && index < max_size)
+	while (source[index] != '\0' && !delim((int)source[index]) && index < max_size)
 	{
 		buffer[index] = source[index];
 		index++;
@@ -32,6 +32,28 @@ size_t copy_until_sep(size_t max_size, char buffer[max_size + 1], char* source)
 	
 	buffer[index] = '\0';
 	return index;
+}
+
+char* next_word_skip(char *string)
+{	//skipts to the START of the NEXT word or end of string
+	//and puts term. char at the END of the FIRST word
+	if (!string) return NULL;
+	
+	while (*string && !isspace((int)*string)) string++;
+	char *word_end = string;
+	while (*string && isspace((int)*string)) string++;
+	*word_end = '\0';
+	
+	return string;
+}
+
+char* word_skip(char *string)
+{	//skipts to the END of the current word
+	if (!string) return NULL;
+	
+	while (*string && !isspace((int)*string)) string++;
+	
+	return string;
 }
 
 size_t readline(FILE *f, size_t max_size, char buffer[max_size + 1])

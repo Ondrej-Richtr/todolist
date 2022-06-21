@@ -33,7 +33,7 @@ inline void date_null(date_t *date)
 
 typedef struct
 {
-	int status;							//signalizes if entry was completed
+	int status;							//signalizes if entry was completed, 0 -> not done, > 0 -> done
 	date_t created_date;				//date of creation
 	date_t deadline;					//deadline for this entry
 	char text_buffer[TEXT_MAX_LEN + 1];	//description of entry, +1 for NULL char
@@ -70,6 +70,8 @@ int llist_add_end(llist *list, todo_entry_t *val);
 
 int llist_add_first(llist *list, todo_entry_t *val);
 
+void llist_delete_after(llist* list, struct node *prev);
+
 void llist_destroy_contents(llist *list);
 
 struct node *llist_nth_node(llist *list, size_t n);
@@ -83,7 +85,12 @@ int isseparator(int c);
 
 void skip_until(FILE *f, int *in_char, char until);
 
-size_t copy_until_sep(size_t max_size, char buffer[max_size + 1], char* source);
+//size_t copy_until_sep(size_t max_size, char buffer[max_size + 1], char* source);
+size_t copy_until_delimiter(size_t max_size, char buffer[max_size + 1], const char* source, int(*delim)(int));
+
+char* next_word_skip(char *string);
+
+char* word_skip(char *string);
 
 size_t readline(FILE *f, size_t max_size, char buffer[max_size + 1]);
 
@@ -119,16 +126,23 @@ int write_one_entry(FILE *f, todo_entry_t *entry);
 int write_entries(FILE *f, llist *list);
 
 //todolist.c
-//cli functionality
-enum CmdType{ help_c, print_c, add_c, del_c };
+enum CmdType{ help_c, print_c, add_c, del_c, mark_c, clear_c };
+enum SpecType{ all_c, done_c, undone_c};
+//parsing enums:
+int parse_cmd_type(char *cmd, enum CmdType *type_ptr);
 
+int parse_specifier_type(char *string, enum SpecType *spec_ptr);
+
+//cli functionality
 int add_entry_string(llist *list, char* string);
 
 int add_entry_splitted(llist *list, char status, date_t orig_date, char *dead_date, char *text);
 
-int llist_asc_map(llist *list, char *string, int(*func)(llist*, size_t));
+int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size_t, size_t));
 
-int delete_entry_string(llist *list, char *string);
+int delete_entry(llist *list, size_t index, size_t orig_index);
+
+int cmd_mark(llist *list, const char *string);
 
 //TODO clear entries (done, undone, all)
 

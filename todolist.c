@@ -66,7 +66,11 @@ int add_entry_splitted(llist *list, char status, date_t orig_date, char *dead_da
 int add_entry_string(llist *list, char* string)
 {	/*adds entry described by C-style string, returns zero if success
 	-1 if bad parameters and failure codes from add_splitted*/
-	if (!list || !string) return -1;
+	if (!list || !string)
+	{
+		fprintf(stderr, "Err: Program passed NULL pointer into adding command! Ignoring this command...\n");
+		return -1;
+	}
 	
 	size_t index = 0;
 	char status = ' ';
@@ -87,7 +91,7 @@ int add_entry_string(llist *list, char* string)
 	//loading deadline
 	if (isdigit(string[index]))
 	{
-		index += copy_until_sep(NUM_BUFFER_SIZE, num_buffer, string + index);
+		index += copy_until_delimiter(NUM_BUFFER_SIZE, num_buffer, string + index, isseparator);
 	}
 	
 	//loading text
@@ -114,11 +118,33 @@ int add_entry_string(llist *list, char* string)
 	return add_entry_splitted(list, status, orig_date, (char*)num_buffer, (char*)text_buffer);
 }
 
-int llist_asc_map(llist *list, char *string, int(*func)(llist*, size_t))
-{
-	if (!list || !string || !func) return -1;
+void llist_clear(llist *list, int status)
+{	//deletes all entries from linked list with given status
+	struct node *n = list->first, *next = NULL, *prev = NULL;
+	
+	while (n != NULL)
+	{
+		next = n->next;
+		
+		if (n->val->status == status) llist_delete_after(list, prev);
+		else prev = n;
+		
+		n = next;
+	}
+}
+
+int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size_t, size_t))
+{	//func should be the mapped function on the list
+	//it should return negative number when error and non-negative
+	//number of deleted entries
+	if (!list || !string || !func)
+	{
+		fprintf(stderr, "Err: Program passed NULL pointer into asc_index_map function! Ignoring current command...\n");
+		return -1;
+	}
 	
 	size_t i = 0, num = 0, deleted = 0, last = 0;
+	int func_ret = 0;
 	
 	while (string[i] != '\0')
 	{
@@ -127,55 +153,135 @@ int llist_asc_map(llist *list, char *string, int(*func)(llist*, size_t))
 		
 		if (!num || num <= last || num < deleted + 1) //when index is zero or not in ascending order
 		{
-			if (num && num <= last) fprintf(stderr, "Err: Wrong index '%u', deleted indices must be in ascending order!\n", num);
-			else fprintf(stderr, "Err: Wrong index '%u' specified to be deleted!\n", num);
+			if (num && num <= last) fprintf(stderr, "Err: Wrong index '%u', indices must be written in ascending order!\n", num);
+			else fprintf(stderr, "Err: Wrong index '%u' specified, it can't be zero or letter!\n", num);
 		}
 		//func shoould print it's own error msg when something goes wrong!
-		else if (!func(list, num - 1 - deleted)) //so we can track how many was successfuly deleted
+		else if ((func_ret = func(list, num - 1 - deleted, num)) >= 0) //so we can track how many was successfuly deleted
 		{
-			deleted++;
+			deleted += func_ret;
 			last = num;
 		}
 		
-		//skipping to the next number to load
-		while (string[i] != '\0' && !isseparator(string[i])) i++;
+		//repetitive skipping to the next number to load
+		while (string[i] != '\0' && !(isseparator(string[i]) || isspace(string[i]))) i++;
 		while (isseparator(string[i]) || isspace(string[i])) i++;
 	}
 	
 	return 0;
 }
 
-int delete_entry_string(llist *list, char *string)
-{	/*parses input from string and deletes those entries specified by index
-	in string, indexing is from 1, nonvalid index or letters generate errors
-	returns nonzero only for invalid parameters, indicies are splitted by separators*/
-	if (!list || !string) return -1;
-	
-	size_t i = 0, num = 0, deleted = 0, last = 0;
-	
-	while (string[i] != '\0')
+int delete_entry(llist *list, size_t index, size_t orig_index)
+{	//deletes entry at given index from linked list
+	//returns -1 if the entry was out of bounds and prints the original index
+	//or otherwise couldnt get deleted
+	//and returns 1 if it was deleted succesfuly
+	if (llist_delete_nth_entry(list, index))
 	{
-		num = (size_t)atoi(string + i);
-		//printf("num to delete: %u\n", num);
-		
-		if (!num || num <= last || num < deleted + 1
-			|| llist_delete_nth_entry(list, num - 1 - deleted))
-		{
-			if (num && num <= last) fprintf(stderr, "Err: Wrong index '%u', deleted indices must be in ascending order!\n", num);
-			else fprintf(stderr, "Err: Wrong index '%u' specified to be deleted!\n", num);
-		}
-		else //so we can track how many was successfuly deleted
-		{
-			deleted++;
-			last = num;
-		}
-		
-		//skipping to the next number to load
-		while (string[i] != '\0' && !isseparator(string[i])) i++;
-		while (isseparator(string[i]) || isspace(string[i])) i++;
+		fprintf(stderr, "Err: Index '%u' to be deleted is out of bounds!\n", orig_index);
+		return -1;
+	}
+	return 1;
+}
+
+int mark_entry(llist *list, size_t index, size_t orig_index, int is_done)
+{
+	//returns -1 if something went wrong, otherwise returns 0
+	todo_entry_t *entry = llist_nth_entry(list, index);
+	if (!entry)
+	{
+		fprintf(stderr, "Err: Index '%u' to be marked is out of bounds!\n", orig_index);
+		return -1;
 	}
 	
+	entry->status = is_done;
 	return 0;
+}
+
+int mark_entry_done(llist *list, size_t index, size_t orig_index)
+{	//marks entry at given index as done
+	return mark_entry(list, index, orig_index, 1);
+}
+
+int mark_entry_undone(llist *list, size_t index, size_t orig_index)
+{	//same as mark_entry_done but marks it undone
+	return mark_entry(list, index, orig_index, 0);
+}
+int cmd_mark(llist *list, const char *data_buffer)
+{	//does the interactive mark command, returns non-null when error
+	//data_buffer should be always smaller or same size as CLI_LINE_MAX_LEN + 1
+	if (!list || !data_buffer)
+	{
+		//TODO probably bad as the interactive while loops continues
+		fprintf(stderr, "Err: Program passed NULL pointer into mark command! Ignoring this command...\n");
+		return -1;
+	}
+	
+	//TODO all_c is not working currently (should it even be allowed here?)
+	enum SpecType spec = all_c;
+	char spec_buffer[CLI_LINE_MAX_LEN + 1] = { 0 };
+	size_t spec_size = copy_until_delimiter(CLI_LINE_MAX_LEN, spec_buffer, data_buffer, isspace);	
+	
+	if (parse_specifier_type(spec_buffer, &spec) && spec != all_c) //specifier was specified and is not all_c
+	{
+		//skipping to the start of non-specifier in data_buffer
+		while (data_buffer[spec_size] && isspace((int)data_buffer[spec_size])) spec_size++;
+		
+		if (data_buffer[spec_size] == '\0') //data is empty (no indices)
+		{
+			fprintf(stderr, "Err: You need to specify indices for marking as done/undone!\n");
+			return 1;
+		}
+		
+		switch (spec)
+		{
+			case done_c: return llist_asc_index_map(list, data_buffer + spec_size, mark_entry_done);
+			case undone_c: return llist_asc_index_map(list, data_buffer + spec_size, mark_entry_undone);
+		}
+		//this should not happen (for now):
+		fprintf(stderr, "Err: Unsupported specifier '%s' in mark command!\n", (char*)spec_buffer);
+		return 1;
+	}
+	//done/undone is not specified so there is nothing to do?
+	fprintf(stderr, "Err: You need to specify if mark as done or undone!\n");
+	return 1;
+}
+
+int cmd_clear(llist *list, char *data_buffer)
+{
+	if (!list || !data_buffer)
+	{
+		//TODO probably bad as the interactive while loops continues
+		fprintf(stderr, "Err: Program passed NULL pointer into clear command! Ignoring this command...\n");
+		return -1;
+	}
+	
+	enum SpecType spec = done_c;
+	char *end = word_skip(data_buffer);
+	*end = '\0'; //cutting off excess data that we dont need
+	
+	if (parse_specifier_type(data_buffer, &spec))
+	{
+		//printf("Spec: %d\n", (int)spec);
+		switch (spec)
+		{
+			case all_c: llist_destroy_contents(list);
+				break;
+			case done_c: llist_clear(list, 1);
+				break;
+			case undone_c: llist_clear(list, 0);
+				break;
+			default:
+				//this should not happen (for now):
+				fprintf(stderr, "Err: Unsupported specifier '%s' in clear command!\n", data_buffer);
+				return 1;
+		}
+		return 0;
+	}
+	
+	//wrong specifier
+	fprintf(stderr, "Err: You need to specify if clear all/done/undone entries!\n");
+	return 1;
 }
 
 int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
@@ -190,13 +296,35 @@ int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 		case print_c: print_llist(list, 1);
 		break;
 		case add_c: return add_entry_string(list, buffer);
-		//TODO different delete function
-		case del_c: return llist_asc_map(list, buffer, llist_delete_nth_entry);
-		//case del_c: return delete_entry_string(list, buffer);
+		case del_c: return llist_asc_index_map(list, buffer, delete_entry);
+		//case mark_c: return llist_asc_index_map(list, buffer, mark_entry_done);
+		case mark_c: return cmd_mark(list, buffer);
+		case clear_c: return cmd_clear(list, buffer);
 		default: fprintf(stderr, "Err: Wrong command type specified '%d' in command caller!\n", type);
 		return 1;
 	}
 	return 0;
+}
+
+int parse_specifier_type(char *string, enum SpecType *spec_ptr)
+{	//checks if string matches any specifier type, if yes then it returns 1
+	//and tries to set the spec, otherwise just returns 0 (also when NULL buffer)
+	if (!string) return 0;
+	
+	if (!strcmp("all", string))
+	{
+		if (spec_ptr) *spec_ptr = all_c;
+	}
+	else if (!strcmp("done", string))
+	{
+		if (spec_ptr) *spec_ptr = done_c;
+	}
+	else if (!strcmp("undone", string))
+	{
+		if (spec_ptr) *spec_ptr = undone_c;
+	}
+	else return 0;
+	return 1;
 }
 
 int parse_cmd_type(char *cmd, enum CmdType *type_ptr)
@@ -208,6 +336,9 @@ int parse_cmd_type(char *cmd, enum CmdType *type_ptr)
 	else if (!strcmp("print", cmd))	*type_ptr = print_c;
 	else if (!strcmp("add", cmd)) *type_ptr = add_c;
 	else if (!strcmp("delete", cmd)) *type_ptr = del_c;
+	else if (!strcmp("mark", cmd)) *type_ptr = mark_c;
+	else if (!strcmp("clear", cmd)) *type_ptr = clear_c;
+	//else if (!strcmp("unmark", cmd)) *type_ptr = unmark_c;
 	else return 0;
 	return 1;
 }
@@ -216,7 +347,6 @@ int parse_inter_cmd(FILE *input, llist *list, char buffer[CLI_LINE_MAX_LEN + 1])
 {	/*parses which command to be done from buffer and if needed loads
 	more lines from the input, then executes correct cli function
 	returns 1 if wrong input or other non-zero if error*/
-	char *noncmd_start = NULL;
 	size_t index = 0, cmd_end = 0;
 	
 	//skipping to the end of first word
@@ -236,11 +366,13 @@ int parse_inter_cmd(FILE *input, llist *list, char buffer[CLI_LINE_MAX_LEN + 1])
 	}
 	
 	//reading next line if more input needed (for add and delete)
-	if (!buffer[index] && (type == add_c || type == del_c))
+	if (!buffer[index] && (type == add_c || type == del_c 
+			|| type == mark_c || type == clear_c))
 	{
 		index = 0;
-		//amount of loaded chars not needed
+		//amount of loaded chars is not needed
 		readline(input, CLI_LINE_MAX_LEN, buffer);
+		while (buffer[index] && isspace(buffer[index])) index++;
 	}
 	
 	if (do_inter_cmd(list, type, (char*)buffer + index)) return 2;
@@ -293,15 +425,17 @@ void print_help()
 {
 	//some basic help print
 	//TODO print detailed help for each specific command
-	puts("-------HELP-------");
+	puts("-------------HELP-------------");
 	puts("Interactive mode commands are:");
 	puts("\t'help' - prints this help on stdout");
 	puts("\t'print' - prints all todolist entries in current memory on stdout");
 	puts("\t'add' - adds one new entry into current todolist");
 	puts("\t'delete' - deletes specified entries from current todolist");
+	puts("\t'mark done/undone' - marks specified entries as done/undone");
+	puts("\t'clear all/done/undone' - clears all/done/undone todolist entries");
 	//puts("\t'add' - adds new entry into todolist, if followed by some nonempty text it tries to interpret this text as the new entry, else it expects another line of text as the new entry");
 	//puts("\t'delete' - deletes entries from todolist, after 'delete' or on the next line enter ascending sequence of numbers separated by '|', those entries will get deleted");
-	puts("------------------");	
+	puts("------------------------------");	
 }
 
 void print_todoentry(todo_entry_t entry, int style)
