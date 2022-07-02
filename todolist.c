@@ -518,6 +518,7 @@ void print_help()
 	puts("\t'delete' - deletes specified entries from current todolist");
 	puts("\t'mark done/undone' - marks specified entries as done/undone");
 	puts("\t'clear all/done/undone' - clears all/done/undone todolist entries");
+	puts("\t'change' - changes one existing entry that you specify");
 	//puts("\t'add' - adds new entry into todolist, if followed by some nonempty text it tries to interpret this text as the new entry, else it expects another line of text as the new entry");
 	//puts("\t'delete' - deletes entries from todolist, after 'delete' or on the next line enter ascending sequence of numbers separated by '|', those entries will get deleted");
 	puts("------------------------------");	
