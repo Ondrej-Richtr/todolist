@@ -55,7 +55,7 @@ int add_entry_splitted(llist *list, char status, date_t orig_date, char *dead_da
 	{
 		fprintf(stderr, "Err: Failed to add following entry into the list!\n");
 		fprintf(stderr, "The entry: ");
-		print_todoentry(*entry, 0);
+		print_todoentry(stderr, *entry, 0);
 		free(entry);
 		return 4;
 	}
@@ -269,7 +269,7 @@ int cmd_clear(llist *list, char *data_buffer)
 	return 1;
 }
 
-int cmd_change(llist *list, char *data_buffer)
+int cmd_change(llist *list, char *data_buffer) //TODO
 {
 	if (!list || !data_buffer)
 	{
@@ -278,7 +278,26 @@ int cmd_change(llist *list, char *data_buffer)
 		return -1;
 	}
 	
+	//gets the number to change (only loads one)
+	size_t num = (size_t)atoi(data_buffer);
+	if (!num)
+	{
+		//TODO err
+		return 1;
+	}
+
+	todo_entry_t *entry = llist_nth_entry(list, num);
+	if (!entry)
+	{
+		//TODO err
+		return 2;
+	}
 	
+	fputs("You are about to change the entry '", stdout);
+	print_todoentry(stdout, *entry, 0);
+	fputs("'\n", stdout);
+	
+	return 0;
 }
 
 int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
@@ -435,22 +454,24 @@ void print_help()
 	puts("------------------------------");	
 }
 
-void print_todoentry(todo_entry_t entry, int style)
-{
+void print_todoentry(FILE *out, const todo_entry_t entry, int style)
+{	//prints todo entry into file 'out', if out is NULL then it does nothing
+	if (!out) return;
+	
 	//TODO style
 	if (style)
 	{
-		if (entry.status) printf("[Y] ");
-		else printf("[N] ");
+		if (entry.status) fputs("[Y] ", out);
+		else fputs("[N] ", out);
 		
 		if (is_date_valid(entry.deadline))
 		{
-			write_date(stdout, entry.deadline);
-			printf(" | ");
+			write_date(out, entry.deadline);
+			fputs(" | ", out);
 		}
 	}
 	
-	puts(entry.text_buffer);
+	fputs(entry.text_buffer, out);
 }
 
 void print_llist(llist *list, int style)
@@ -459,6 +480,7 @@ void print_llist(llist *list, int style)
 	for (struct node *n = list->first; n != NULL; n = n->next)
 	{
 		if (style) printf("%u\t", num++);
-		print_todoentry(*(n->val), style);
+		print_todoentry(stdout, *(n->val), style);
+		putchar('\n');
 	}
 }

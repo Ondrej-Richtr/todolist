@@ -121,7 +121,7 @@ int load_entries(llist *list, const char *path);
 //todolist_write.c
 void write_buffer(FILE *f, char* buffer);
 
-int write_date(FILE *f, const date_t date);
+int write_date(FILE *out, const date_t date);
 
 int write_one_entry(FILE *f, todo_entry_t *entry);
 
@@ -153,6 +153,6 @@ int interactive_mode(FILE *input, const char *todo_file_path);
 //outputting
 void print_help();
 
-void print_todoentry(todo_entry_t entry, int style);
+void print_todoentry(FILE *out, const todo_entry_t entry, int style);
 
 void print_llist(llist *list, int style);
