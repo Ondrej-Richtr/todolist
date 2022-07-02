@@ -1,7 +1,7 @@
 #include "todolist.h"
 
 
-//declaratons:
+//declarations:
 int is_date_valid(const date_t date);
 
 void date_null(date_t *date);
@@ -10,72 +10,61 @@ int is_todoentry_valid(todo_entry_t *entry);
 
 //definitions:
 
+//time handling
+date_t get_current_date()
+{	//tries to return current date given by system
+	//if it fails then it returns (invalid) zero date
+	date_t output;
+	date_null(&output); //setting the date to zeroes (invalid date)
+	
+	time_t sec = time(NULL); //getting current time and time structure to get current date
+	struct tm *time_struct = localtime(&sec);
+	if (time_struct) //if the localtime function fails we leave orig_date invalid (zeroes)
+	{
+		output.day = (uint_least8_t)time_struct->tm_mday;
+		output.month = (uint_least8_t)time_struct->tm_mon + 1;
+		output.year = (uint_least16_t)time_struct->tm_year + 1900;
+	}
+	
+	return output;
+}
+
 //cli funcionality
-int add_entry_splitted(llist *list, char status, date_t orig_date, char *dead_date, char *text)
-{
-	todo_entry_t *entry = malloc(sizeof(todo_entry_t));
+int generate_entry_splitted(todo_entry_t *entry, const char status, const date_t orig_date, char *dead_date)
+{	/*fills entry attributes specified by other parameters, EXCLUDING the text!
+	returns zero if success, -1 if NULL entry and non-zero if error*/
+	
 	if (!entry)
 	{
-		fprintf(stderr, "Err: Failed to allocate %u bytes of memory!\n", sizeof(todo_entry_t));
+		fprintf(stderr, "Err: NULL pointer passed into generating of new entry! Entry aborted\n");
+		return -1;
+	}
+	
+	if (!dead_date || !*dead_date) date_null(&entry->deadline);
+	else if (load_date_string(&entry->deadline, dead_date))
+	{
+		fprintf(stderr, "Err: Wrong formating of date '%s' entered! Entry aborted\n", dead_date);
 		return 1;
 	}
 	
+	//no error should happen over there: (so we set thing only now)
 	entry->status = 0;
 	if (status == 'X') entry->status = 1;
 	
-	if (!dead_date) date_null(&entry->deadline);
-	else if (load_date_string(&entry->deadline, dead_date))
-	{
-		fprintf(stderr, "Err: Wrong formating of date '%s' entered!\n", dead_date);
-		free(entry);
-		return 2;
-	}
-	
 	entry->created_date = orig_date;
-	/*if (!orig_date) date_null(&entry->created_date);
-	else if (load_date_string(&entry->created_date, orig_date))
-	{
-		fprintf(stderr, "Err: Wrong formating of date '%s' entered!\n", orig_date);	
-		free(entry);
-		return 3;
-	}*/
-	
-	//can't fail, at worst it loads nothing
-	strcpy_buffer(TEXT_MAX_LEN, (char*)entry->text_buffer, text);
-	
-	//we check if the final entry makes sense, if not discard it
-	if (!is_todoentry_valid(entry))
-	{
-		fprintf(stderr, "Err: Entry to be added is not valid! (Has no text and no date)\n");
-		free(entry);
-		return 5;
-	}
-	
-	if (!llist_add_end(list, entry))
-	{
-		fprintf(stderr, "Err: Failed to add following entry into the list!\n");
-		fprintf(stderr, "The entry: ");
-		print_todoentry(stderr, *entry, 0);
-		free(entry);
-		return 4;
-	}
 	
 	return 0;
 }
 
-int add_entry_string(llist *list, char* string)
-{	/*adds entry described by C-style string, returns zero if success
-	-1 if bad parameters and failure codes from add_splitted*/
-	if (!list || !string)
-	{
-		fprintf(stderr, "Err: Program passed NULL pointer into adding command! Ignoring this command...\n");
-		return -1;
-	}
+int generate_entry_from_string(const char* string, todo_entry_t *entry)
+{	/*fills todo_entry according to given C-styl string
+	returns zero if success, -1 if bad parameters and positive ints if error when parsing*/
+	if (!string || !entry) return -1;
 	
 	size_t index = 0;
 	char status = ' ';
-	//buffer for deadline number and for text
-	char num_buffer[NUM_BUFFER_SIZE + 1] = { 0 }, text_buffer[TEXT_MAX_LEN + 1] = { 0 };
+	//buffer for deadline number (could be static, but I chose it not to be for now)
+	char num_buffer[NUM_BUFFER_SIZE + 1] = { 0 };
 	
 	//first letter is checked if it's status
 	if (string[0] == 'X')
@@ -93,29 +82,18 @@ int add_entry_string(llist *list, char* string)
 	{
 		index += copy_until_delimiter(NUM_BUFFER_SIZE, num_buffer, string + index, isseparator);
 	}
+	else num_buffer[0] = '\0'; //because the buffer is static and may contain something
 	
 	//loading text
 	//string index now points to either end of string or at separator before text or text
 	if (isseparator(string[index])) index++;
 	//now at end (empty text) or text (non empty)
-	strcpy_buffer(TEXT_MAX_LEN, (char*)text_buffer, string + index);
+	strcpy_buffer(TEXT_MAX_LEN, (char*)entry->text_buffer, string + index);
 	
 	//loading the time this entry was created (current time)
-	date_t orig_date;
-	date_null(&orig_date); //setting the date to zeroes (invalid date)
+	date_t orig_date = get_current_date();
 	
-	time_t sec = time(NULL); //getting current time and time structure to get current date
-	struct tm *time_struct = localtime(&sec);
-	if (time_struct) //if the localtime function fails we leave orig_date invalid (zeroes)
-	{
-		orig_date.day = (uint_least8_t)time_struct->tm_mday;
-		orig_date.month = (uint_least8_t)time_struct->tm_mon + 1;
-		orig_date.year = (uint_least16_t)time_struct->tm_year + 1900;
-	}
-	//write_date(stdout, orig_date);
-	//putc('\n');
-	
-	return add_entry_splitted(list, status, orig_date, (char*)num_buffer, (char*)text_buffer);
+	return generate_entry_splitted(entry, status, orig_date, (char*)num_buffer);
 }
 
 int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size_t, size_t))
@@ -129,28 +107,78 @@ int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size
 	}
 	
 	size_t i = 0, num = 0, deleted = 0, last = 0;
-	int func_ret = 0;
+	int func_ret = 0, atoi_ret = 0;
 	
 	while (string[i] != '\0')
 	{
-		num = (size_t)atoi(string + i);
-		//printf("num to delete: %u\n", num);
-		
-		if (!num || num <= last || num < deleted + 1) //when index is zero or not in ascending order
+		atoi_ret = atoi(string + i);
+		if (atoi_ret < 0)
 		{
-			if (num && num <= last) fprintf(stderr, "Err: Wrong index '%u', indices must be written in ascending order!\n", num);
-			else fprintf(stderr, "Err: Wrong index '%u' specified, it can't be zero or letter!\n", num);
+			fprintf(stderr, "Err: Wrong index '%d' specified, it can't be negative!\n", atoi_ret);
 		}
-		//func shoould print it's own error msg when something goes wrong!
-		else if ((func_ret = func(list, num - 1 - deleted, num)) >= 0) //so we can track how many was successfuly deleted
+		else //ugly indentation, but whatever
 		{
-			deleted += func_ret;
-			last = num;
+			num = (size_t)atoi_ret; //this should always cast correctly
+			//printf("num to delete: %u\n", num);
+			
+			if (!num || num <= last || num < deleted + 1) //when index is zero or not in ascending order
+			{
+				if (num && num <= last) fprintf(stderr, "Err: Wrong index '%u', indices must be written in ascending order!\n", num);
+				else fprintf(stderr, "Err: Wrong index '%u' specified, it can't be zero or letter!\n", num);
+			}
+			//func shoould print it's own error msg when something goes wrong!
+			else if ((func_ret = func(list, num - 1 - deleted, num)) >= 0) //so we can track how many was successfuly deleted
+			{
+				deleted += func_ret;
+				last = num;
+			}
 		}
-		
 		//repetitive skipping to the next number to load
 		while (string[i] != '\0' && !(isseparator(string[i]) || isspace(string[i]))) i++;
 		while (isseparator(string[i]) || isspace(string[i])) i++;
+	}
+	
+	return 0;
+}
+
+int cmd_add(llist *list, char *data_buffer)
+{	/*adds entry described by C-style string in data_buffer, returns zero if success
+	-1 if bad parameters and failure codes (positive ints) from add_splitted*/
+	if (!list || !data_buffer)
+	{
+		fprintf(stderr, "Err: Program passed NULL pointer into adding command! Ignoring this command...\n");
+		return -1;
+	}
+	
+	todo_entry_t *entry = malloc(sizeof(todo_entry_t));
+	if (!entry)
+	{
+		fprintf(stderr, "Err: Failed to allocate %u bytes of memory!\n", sizeof(todo_entry_t));
+		return 1;
+	}
+	
+	if (generate_entry_from_string(data_buffer, entry)) //only deadline date can be loaded incorrectly
+	{
+		//error message should get printed by generate_entry_splitted
+		free(entry);
+		return 2;
+	}
+	
+	if (!is_todoentry_valid(entry)) //we check if the final entry makes sense, if not discard it
+	{
+		fprintf(stderr, "Err: Entry to be added is not valid! (Has no text and no date)\n");
+		free(entry);
+		return 3;
+	}
+	
+	if (!llist_add_end(list, entry))
+	{
+		fprintf(stderr, "Err: Failed to add following entry into the list!\n");
+		fprintf(stderr, "The entry: ");
+		print_todoentry(stderr, *entry, 0);
+		fputc('\n', stderr);
+		free(entry);
+		return 4;
 	}
 	
 	return 0;
@@ -269,7 +297,7 @@ int cmd_clear(llist *list, char *data_buffer)
 	return 1;
 }
 
-int cmd_change(llist *list, char *data_buffer) //TODO
+int cmd_change(llist *list, char *data_buffer, int is_verbose) //TODO
 {
 	if (!list || !data_buffer)
 	{
@@ -279,23 +307,63 @@ int cmd_change(llist *list, char *data_buffer) //TODO
 	}
 	
 	//gets the number to change (only loads one)
-	size_t num = (size_t)atoi(data_buffer);
-	if (!num)
+	int atoi_ret = atoi(data_buffer);
+	if (atoi_ret < 0)
 	{
-		//TODO err
+		fprintf(stderr, "Err: Wrong index '%d' specified, it can't be negative!\n", atoi_ret);
 		return 1;
 	}
-
-	todo_entry_t *entry = llist_nth_entry(list, num);
-	if (!entry)
+	
+	size_t num = (size_t)atoi_ret;
+	if (!num)
 	{
-		//TODO err
+		fprintf(stderr, "Err: Wrong index '%u' specified, indices can't be zero or letter!\n", num);
 		return 2;
 	}
+
+	todo_entry_t *old_entry = llist_nth_entry(list, num - 1);
+	if (!old_entry)
+	{
+		fprintf(stderr, "Err: Index '%u' to be changed is out of bounds!\n", num);
+		return 3;
+	}
 	
-	fputs("You are about to change the entry '", stdout);
-	print_todoentry(stdout, *entry, 0);
-	fputs("'\n", stdout);
+	if (is_verbose)
+	{
+		fprintf(stdout, "You are about to change the #%u entry: '", num);
+		print_todoentry(stdout, *old_entry, 1);
+		fputs("'\nWrite changed version at the next line or you can abort by writing an empty line\n", stdout);
+	}
+	
+	char line_buffer[CLI_LINE_MAX_LEN + 1] = { 0 }; //could be static
+	size_t line_len = readline(stdin, CLI_LINE_MAX_LEN, line_buffer);
+	if (!line_len)
+	{
+		//TODO abort message if is_verbose?
+		//puts("Aborted success");
+		return 0;
+	}
+	
+	todo_entry_t new_entry;
+	int gen_err = generate_entry_from_string((char*)line_buffer, &new_entry);
+	if (gen_err)
+	{
+		//error message should get printed by generate_entry_splitted
+		fprintf(stderr, "Leaving old entry unchanged\n");
+		//printf("Gen err: %d\n", gen_err);
+		return 4;
+	}
+	
+	if (!is_todoentry_valid(&new_entry)) //we check if the final entry makes sense, if not discard it
+	{
+		fprintf(stderr, "Err: Entered entry is not valid! (Has no text and no date) Leaving old entry unchanged\n");
+		return 5;
+	}
+	
+	//change the old entry into new one
+	*old_entry = new_entry;
+	
+	//TODO another message if is_verbose?
 	
 	return 0;
 }
@@ -311,12 +379,13 @@ int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 		break;
 		case print_c: print_llist(list, 1);
 		break;
-		case add_c: return add_entry_string(list, buffer);
+		case add_c: return cmd_add(list, buffer);
 		case del_c: return llist_asc_index_map(list, buffer, delete_entry);
-		//case mark_c: return llist_asc_index_map(list, buffer, mark_entry_done);
 		case mark_c: return cmd_mark(list, buffer);
 		case clear_c: return cmd_clear(list, buffer);
-		default: fprintf(stderr, "Err: Wrong command type specified '%d' in command caller!\n", type);
+		case change_c: return cmd_change(list, buffer, 1); //1 is for verbose mode (default in interactive)
+		default: //this shouldn't normally happen
+		fprintf(stderr, "Err: Wrong command type specified '%d' in command caller!\n", type);
 		return 1;
 	}
 	return 0;
@@ -354,7 +423,7 @@ int parse_cmd_type(char *cmd, enum CmdType *type_ptr)
 	else if (!strcmp("delete", cmd)) *type_ptr = del_c;
 	else if (!strcmp("mark", cmd)) *type_ptr = mark_c;
 	else if (!strcmp("clear", cmd)) *type_ptr = clear_c;
-	//else if (!strcmp("unmark", cmd)) *type_ptr = unmark_c;
+	else if (!strcmp("change", cmd)) *type_ptr = change_c;
 	else return 0;
 	return 1;
 }

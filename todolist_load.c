@@ -180,19 +180,19 @@ int load_date_string(date_t *d, char *str_start)
 	int num = 0;
 	
 	str_end = string_num_end(str_start, &str_start);
-	if (str_end == NULL) return 1;	//failed at loading 1
+	if (str_end == NULL || str_end == str_start) return 1;	//failed at loading 1
 	//printf("end char: '%c'\n", *str_end);
 	d->day = (uint8_t)atoi(str_start);
 	str_start = str_end;
 	
 	str_end = string_num_end(str_start, &str_start);
-	if (str_end == NULL) return 2;	//failed at loading 2
+	if (str_end == NULL || str_end == str_start) return 2;	//failed at loading 2
 	//printf("end char: '%c'\n", *str_end);
 	d->month = (uint8_t)atoi(str_start);
 	str_start = str_end;
 	
 	str_end = string_num_end(str_start, &str_start);
-	if (str_end == NULL) return 3;	//failed at loading 3
+	if (str_end == NULL || str_end == str_start) return 3;	//failed at loading 3
 	//printf("end char: '%c'\n", *str_end);
 	d->year = (uint16_t)atoi(str_start);	
 	
@@ -220,7 +220,7 @@ size_t load_buffer(FILE *f, char buffer[TEXT_MAX_LEN], int *in_char) //TODO prob
 	return count;
 }
 
-void strcpy_buffer(size_t buffer_size, char *buffer, char *source)
+void strcpy_buffer(size_t buffer_size, char *buffer, const char *source)
 {	//copies content of source string into buffer of given size + 1 (null char)
 	//does nothing if given invalid pointers
 	if (!buffer || !source) return;
@@ -310,6 +310,7 @@ int load_entries(llist *list, const char *path)
 			fprintf(stderr, "Err: Failed to add following entry into the list!\n");
 			fprintf(stderr, "The entry: ");
 			print_todoentry(stderr, *entry, 0);
+			fputc('\n', stderr);
 			llist_destroy_contents(list);
 			free(entry);
 			fclose(f);

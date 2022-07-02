@@ -34,7 +34,7 @@ inline void date_null(date_t *date)
 typedef struct
 {
 	int status;							//signalizes if entry was completed, 0 -> not done, > 0 -> done
-	date_t created_date;				//date of creation
+	date_t created_date;				//date of creation (currently date of last modification)
 	date_t deadline;					//deadline for this entry
 	char text_buffer[TEXT_MAX_LEN + 1];	//description of entry, +1 for NULL char
 } todo_entry_t;
@@ -112,7 +112,7 @@ int load_date_string(date_t *d, char *str_start);
 
 size_t load_buffer(FILE *f, char buffer[TEXT_MAX_LEN], int *in_char);
 
-void strcpy_buffer(size_t buffer_size, char *buffer, char *source);
+void strcpy_buffer(size_t buffer_size, char *buffer, const char *source);
 
 int load_one_entry(FILE *f, todo_entry_t *entry);
 
@@ -128,25 +128,37 @@ int write_one_entry(FILE *f, todo_entry_t *entry);
 int write_entries(FILE *f, llist *list);
 
 //todolist.c
-enum CmdType{ help_c, print_c, add_c, del_c, mark_c, clear_c };
+enum CmdType{ help_c, print_c, add_c, del_c, mark_c, clear_c, change_c };
 enum SpecType{ all_c, done_c, undone_c};
+
+//time handling:
+date_t get_current_date();
+
 //parsing enums:
 int parse_cmd_type(char *cmd, enum CmdType *type_ptr);
 
 int parse_specifier_type(char *string, enum SpecType *spec_ptr);
 
 //cli functionality
-int add_entry_string(llist *list, char* string);
+int generate_entry_splitted(todo_entry_t *entry, const char status, const date_t orig_date, char *dead_date);
 
-int add_entry_splitted(llist *list, char status, date_t orig_date, char *dead_date, char *text);
+int generate_entry_from_string(const char* string, todo_entry_t *entry);
+
+/*int add_entry_string(llist *list, char* string);
+
+int add_entry_splitted(llist *list, char status, date_t orig_date, char *dead_date, char *text);*/
 
 int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size_t, size_t));
+
+int cmd_add(llist *list, char *data_buffer);
 
 int delete_entry(llist *list, size_t index, size_t orig_index);
 
 int cmd_mark(llist *list, const char *string);
 
-//TODO clear entries (done, undone, all)
+int cmd_clear(llist *list, char *data_buffer);
+
+int cmd_change(llist *list, char *data_buffer, int is_verbose);
 
 int interactive_mode(FILE *input, const char *todo_file_path);
 

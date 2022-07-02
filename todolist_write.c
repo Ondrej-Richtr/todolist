@@ -50,7 +50,8 @@ int write_entries(FILE *f, llist *list)
 			//same error message as in add_entry_splitted:
 			fprintf(stderr, "Err: Failed to write following entry into the todo file!\n");
 			fprintf(stderr, "The entry: ");
-			print_todoentry(stderr, *(n->val), 0);
+			print_todoentry(stderr, *(n->val), 1);
+			fputc('\n', stderr);
 			return 1;
 		}
 	}
