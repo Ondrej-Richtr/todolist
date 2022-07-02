@@ -80,6 +80,8 @@ todo_entry_t *llist_nth_entry(llist *list, size_t n);
 
 int llist_delete_nth_entry(llist *list, size_t n);
 
+void llist_clear(llist *list, int status);
+
 //todolist_load.c
 int isseparator(int c);
 

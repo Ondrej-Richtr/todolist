@@ -134,3 +134,18 @@ int llist_delete_nth_entry(llist *list, size_t n)
 	
 	return 0;
 }
+
+void llist_clear(llist *list, int status)
+{	//deletes all entries from linked list with given status
+	struct node *n = list->first, *next = NULL, *prev = NULL;
+	
+	while (n != NULL)
+	{
+		next = n->next;
+		
+		if (n->val->status == status) llist_delete_after(list, prev);
+		else prev = n;
+		
+		n = next;
+	}
+}

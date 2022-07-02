@@ -118,21 +118,6 @@ int add_entry_string(llist *list, char* string)
 	return add_entry_splitted(list, status, orig_date, (char*)num_buffer, (char*)text_buffer);
 }
 
-void llist_clear(llist *list, int status)
-{	//deletes all entries from linked list with given status
-	struct node *n = list->first, *next = NULL, *prev = NULL;
-	
-	while (n != NULL)
-	{
-		next = n->next;
-		
-		if (n->val->status == status) llist_delete_after(list, prev);
-		else prev = n;
-		
-		n = next;
-	}
-}
-
 int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size_t, size_t))
 {	//func should be the mapped function on the list
 	//it should return negative number when error and non-negative
@@ -282,6 +267,18 @@ int cmd_clear(llist *list, char *data_buffer)
 	//wrong specifier
 	fprintf(stderr, "Err: You need to specify if clear all/done/undone entries!\n");
 	return 1;
+}
+
+int cmd_change(llist *list, char *data_buffer)
+{
+	if (!list || !data_buffer)
+	{
+		//TODO probably bad as the interactive while loops continues
+		fprintf(stderr, "Err: Program passed NULL pointer into change command! Ignoring this command...\n");
+		return -1;
+	}
+	
+	
 }
 
 int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
