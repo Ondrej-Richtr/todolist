@@ -363,9 +363,16 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose) //TODO
 	//change the old entry into new one
 	*old_entry = new_entry;
 	
-	//TODO another message if is_verbose?
+	//TODO maybe typo in success
+	if (is_verbose) printf("The #%u entry was changed successfuly\n", num);
 	
 	return 0;
+}
+
+int cmd_move(llist *list, char *data_buffer)
+{	//TODO
+	printf("to be done\n");
+	if (1) return 0;
 }
 
 int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
@@ -384,10 +391,29 @@ int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 		case mark_c: return cmd_mark(list, buffer);
 		case clear_c: return cmd_clear(list, buffer);
 		case change_c: return cmd_change(list, buffer, 1); //1 is for verbose mode (default in interactive)
+		case move_c: return cmd_move(list, buffer);
 		default: //this shouldn't normally happen
 		fprintf(stderr, "Err: Wrong command type specified '%d' in command caller!\n", type);
 		return 1;
 	}
+	return 0;
+}
+
+int parse_range(char *string, size_t *start, size_t *end)
+{	/*parses input from string in format "startnum-endnum"
+	ignores whitespaces at the start and other text after
+	returns non-zero if bounds not found*/
+	size_t index = 0;
+	//skipping initial whitespaces
+	while (string[index] && isspace((int)string[index])) index++;
+	
+	if (!string[index] || !isdigit((int)string[index])) return 1;
+	
+	char *num1 = string + index,
+	 *dash = string_num_end(string + index, NULL),
+	 *num2 = NULL;
+	string_num_end(dash, &num2); //ignoring the end of number?
+	//TODO
 	return 0;
 }
 
@@ -416,7 +442,7 @@ int parse_cmd_type(char *cmd, enum CmdType *type_ptr)
 {	//returns zero if not supported type, otherwise returns 1
 	//and fills type_ptr with correct type
 
-	//if (!cmd || !type_ptr) return 0;
+	//TODO more effective way
 	if (!strcmp("help", cmd)) *type_ptr = help_c;
 	else if (!strcmp("print", cmd))	*type_ptr = print_c;
 	else if (!strcmp("add", cmd)) *type_ptr = add_c;
@@ -424,6 +450,7 @@ int parse_cmd_type(char *cmd, enum CmdType *type_ptr)
 	else if (!strcmp("mark", cmd)) *type_ptr = mark_c;
 	else if (!strcmp("clear", cmd)) *type_ptr = clear_c;
 	else if (!strcmp("change", cmd)) *type_ptr = change_c;
+	else if (!strcmp("move", cmd)) *type_ptr = move_c;
 	else return 0;
 	return 1;
 }
@@ -478,7 +505,7 @@ int interactive_mode(FILE *input, const char *todo_file_path)
 		return 1;
 	}
 	
-	char line_buffer[CLI_LINE_MAX_LEN + 1] = { 'x' };
+	char line_buffer[CLI_LINE_MAX_LEN + 1] = { 0 };
 	size_t line_len = 0;
 	int parse_err = 0;
 	
@@ -519,8 +546,6 @@ void print_help()
 	puts("\t'mark done/undone' - marks specified entries as done/undone");
 	puts("\t'clear all/done/undone' - clears all/done/undone todolist entries");
 	puts("\t'change' - changes one existing entry that you specify");
-	//puts("\t'add' - adds new entry into todolist, if followed by some nonempty text it tries to interpret this text as the new entry, else it expects another line of text as the new entry");
-	//puts("\t'delete' - deletes entries from todolist, after 'delete' or on the next line enter ascending sequence of numbers separated by '|', those entries will get deleted");
 	puts("------------------------------");	
 }
 

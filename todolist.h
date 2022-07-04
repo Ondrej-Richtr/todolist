@@ -106,6 +106,8 @@ int load_num_tolerant_8(FILE *f, uint_least8_t* num, int *in_char);
 
 int load_num_tolerant_16(FILE *f, uint_least16_t* num, int *in_char);
 
+char* string_num_end(char *num_start, char **new_start);
+
 int load_date(FILE *f, date_t* d, int c);
 
 int load_date_string(date_t *d, char *str_start);
@@ -128,7 +130,7 @@ int write_one_entry(FILE *f, todo_entry_t *entry);
 int write_entries(FILE *f, llist *list);
 
 //todolist.c
-enum CmdType{ help_c, print_c, add_c, del_c, mark_c, clear_c, change_c };
+enum CmdType{ help_c, print_c, add_c, del_c, mark_c, clear_c, change_c, move_c };
 enum SpecType{ all_c, done_c, undone_c};
 
 //time handling:
