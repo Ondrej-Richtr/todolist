@@ -147,15 +147,15 @@ int load_num_tolerant_16(FILE *f, uint_least16_t* num, int *in_char) //16 bit ve
 }
 
 char* string_num_end(char *num_start, char **new_start)
-{	//find first number in given string 'num_start' and returns where this number end
+{	//find first number in given string 'num_start' and returns where this number ends
 	//if new_start is not NULL then stores start of this number there
 	if (!num_start) return NULL;
 	
-	while (*num_start != '\0' && !isdigit(*num_start)) num_start++;
+	while (*num_start != '\0' && !isdigit((int)*num_start)) num_start++;
 	
 	if (new_start != NULL) *new_start = num_start; //setting where number starts
 	
-	while (*num_start != '\0' && isdigit(*num_start)) num_start++;
+	while (*num_start != '\0' && isdigit((int)*num_start)) num_start++;
 	return num_start;
 }
 

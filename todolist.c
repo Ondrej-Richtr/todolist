@@ -407,13 +407,22 @@ int parse_range(char *string, size_t *start, size_t *end)
 	//skipping initial whitespaces
 	while (string[index] && isspace((int)string[index])) index++;
 	
+	//there must be a digit after whitespaces
 	if (!string[index] || !isdigit((int)string[index])) return 1;
 	
 	char *num1 = string + index,
 	 *dash = string_num_end(string + index, NULL),
 	 *num2 = NULL;
-	string_num_end(dash, &num2); //ignoring the end of number?
-	//TODO
+	
+	if (*dash != '-') return 2; //dash shouldnt be NULL
+	string_num_end(dash, &num2); //ignoring the end of the number?
+	if (!*num2) return 3; //the second number must be specified
+	if (num2 - dash != 1) return 3; //epic pointer arithmetic hacking
+	
+	//TODO replace atoi with custom implementation
+	if (start) *start = atoi(num1);
+	if (end) *end = atoi(num2);
+	
 	return 0;
 }
 

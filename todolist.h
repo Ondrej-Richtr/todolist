@@ -162,6 +162,8 @@ int cmd_clear(llist *list, char *data_buffer);
 
 int cmd_change(llist *list, char *data_buffer, int is_verbose);
 
+int parse_range(char *string, size_t *start, size_t *end);
+
 int interactive_mode(FILE *input, const char *todo_file_path);
 
 //outputting

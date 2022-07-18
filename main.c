@@ -15,3 +15,16 @@ int main()
 
 	return EXIT_SUCCESS;
 }
+
+int main2()
+{
+	char *input = "2-33";
+	size_t start = 0, end = 0;
+	int err = parse_range(input, &start, &end);
+	if (err)
+	{
+		printf("Error: %d\n", err);
+	}
+	else printf("start: %u end: %u\n", start, end);
+	return 0;
+}
