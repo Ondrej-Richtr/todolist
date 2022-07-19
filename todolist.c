@@ -371,8 +371,38 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose) //TODO
 
 int cmd_move(llist *list, char *data_buffer)
 {	//TODO
+	if (!list || !data_buffer)
+	{
+		//TODO probably bad as the interactive while loops continues
+		fprintf(stderr, "Err: Program passed NULL pointer into change command! Ignoring this command...\n");
+		return -1;
+	}
+	
 	printf("to be done\n");
 	if (1) return 0;
+	
+	size_t from = 0, to = 0;
+	if (parse_range(data_buffer, &from, &to, &data_buffer))
+	{
+		//TODO move the data_buffer pointer
+		from = atoi(data_buffer);
+		to = from;
+	}
+	
+	if (!from || !to)
+	{
+		//TODO err
+		return 1;
+	}
+	
+	size_t where = atoi(data_buffer);
+	if (!where)
+	{
+		//TODO err
+		return 2;
+	}
+	
+	return 0;
 }
 
 int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
@@ -399,7 +429,7 @@ int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 	return 0;
 }
 
-int parse_range(char *string, size_t *start, size_t *end)
+int parse_range(char *string, size_t *start, size_t *end, char **range_end)
 {	/*parses input from string in format "startnum-endnum"
 	ignores whitespaces at the start and other text after
 	returns non-zero if bounds not found*/
@@ -415,13 +445,14 @@ int parse_range(char *string, size_t *start, size_t *end)
 	 *num2 = NULL;
 	
 	if (*dash != '-') return 2; //dash shouldnt be NULL
-	string_num_end(dash, &num2); //ignoring the end of the number?
+	char *num2_end = string_num_end(dash, &num2);
 	if (!*num2) return 3; //the second number must be specified
 	if (num2 - dash != 1) return 3; //epic pointer arithmetic hacking
 	
 	//TODO replace atoi with custom implementation
 	if (start) *start = atoi(num1);
 	if (end) *end = atoi(num2);
+	if (range_end) *range_end = num2_end;
 	
 	return 0;
 }

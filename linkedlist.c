@@ -9,6 +9,20 @@ void node_destroy(struct node *n)
 	free(n);
 }
 
+size_t llist_length(llist *list)
+{
+	size_t length = 0;
+	struct node *n = list->first;
+	
+	while (n)
+	{
+		length++;
+		n = n->next;
+	}
+	
+	return length;
+}
+
 void llist_add_node_end(llist *list, struct node *n)
 {
 	if (list->last == NULL) list->first = n;
@@ -148,4 +162,83 @@ void llist_clear(llist *list, int status)
 		
 		n = next;
 	}
+}
+
+int llist_disconnect(llist *list, llist *into, size_t start, size_t end)
+{	//indexing is from 0, disconnects specified section from 'list' and connects it into
+	//EMPTY linked list given by 'into', returns nonzero when error
+	if (!list || !into || into->first || into->last) return -1;
+	if (start > end) return 1;
+	
+	struct node *start_node_prev = NULL, *end_node = NULL, *start_node = NULL;
+	size_t length = llist_length(list);
+	if (end >= length) return 2;
+	
+	//setting up start-node_prev and end_node (not touching the lists)
+	if (!start) start_node_prev = NULL;
+	else start_node_prev = llist_nth_node(list, start - 1);
+	
+	if (length == end + 1) end_node = list->last;
+	else end_node = llist_nth_node(list, end);
+	if (!end_node)
+	{
+		//TODO err?
+		return 3;
+	}
+	
+	//touching the lists
+	if (start_node_prev == NULL)
+	{
+		start_node = list->first;
+		list->first = end_node->next;
+	}
+	else
+	{
+		start_node = start_node_prev->next;
+		start_node_prev->next = end_node->next;
+	}
+	
+	if (end_node == list->last)
+	{
+		list->last = start_node_prev;
+	}
+	end_node->next = NULL;
+	into->first = start_node;
+	into->last = end_node;
+	
+	return 0;
+}
+
+int llist_move(llist *list, size_t from, size_t to, size_t where)
+{	//indexing is from 0, moves range defined by 'from':'to' of nodes
+	//into place starting at index 'where'
+	
+	//WORK IN PROGRESS
+	if (!list || from > to) return -1;
+	
+	struct node *where_node = llist_nth_node(list, where);
+	if (!where_node)
+	{
+		//TODO err
+		return 1;
+	}
+	
+	size_t moved_start = from, moved_end = to;
+	llist moved = { NULL, NULL };
+	
+	if (where >= from && where <= to)
+	{
+		//TODO inside of moved list
+	}
+	
+	int diserr = llist_disconnect(list, &moved, moved_start, moved_end);
+	if (diserr)
+	{
+		//TODO err
+		return 2;
+	}
+	//moved now shouldnt contain NULL pointers, right?
+
+	
+	return 0;
 }

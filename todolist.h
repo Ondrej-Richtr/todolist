@@ -60,6 +60,8 @@ typedef struct linked_list
 } llist;
 
 //linkedlist.c
+size_t llist_length(llist *list);
+
 void llist_add_node_end(llist *list, struct node *n);
 
 void llist_add_node_first(llist *list, struct node *n);
@@ -81,6 +83,8 @@ todo_entry_t *llist_nth_entry(llist *list, size_t n);
 int llist_delete_nth_entry(llist *list, size_t n);
 
 void llist_clear(llist *list, int status);
+
+int llist_disconnect(llist *list, llist *into, size_t start, size_t end);
 
 //todolist_load.c
 int isseparator(int c);
@@ -162,7 +166,7 @@ int cmd_clear(llist *list, char *data_buffer);
 
 int cmd_change(llist *list, char *data_buffer, int is_verbose);
 
-int parse_range(char *string, size_t *start, size_t *end);
+int parse_range(char *string, size_t *start, size_t *end, char **range_end);
 
 int interactive_mode(FILE *input, const char *todo_file_path);
 

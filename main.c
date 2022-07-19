@@ -18,13 +18,44 @@ int main()
 
 int main2()
 {
-	char *input = "2-33";
-	size_t start = 0, end = 0;
-	int err = parse_range(input, &start, &end);
+	//for testing the disconnect function
+	todo_entry_t *e1 = malloc(sizeof(todo_entry_t)),
+	*e2 = malloc(sizeof(todo_entry_t)),
+	*e3 = malloc(sizeof(todo_entry_t)),
+	*e4 = malloc(sizeof(todo_entry_t)),
+	*e5 = malloc(sizeof(todo_entry_t));
+	llist list = { NULL, NULL }, into = { NULL, NULL };
+	strcpy((char*)e1->text_buffer, "prvni");
+	strcpy((char*)e2->text_buffer, "druhy");
+	strcpy((char*)e3->text_buffer, "treti");
+	strcpy((char*)e4->text_buffer, "ctvrty");
+	strcpy((char*)e5->text_buffer, "paty");
+	llist_add_end(&list, e1);
+	llist_add_end(&list, e2);
+	llist_add_end(&list, e3);
+	llist_add_end(&list, e4);
+	llist_add_end(&list, e5);
+
+	print_llist(&list, 1);
+	
+	int err = llist_disconnect(&list, &into, 4, 4);
 	if (err)
 	{
 		printf("Error: %d\n", err);
+		return 1;
 	}
-	else printf("start: %u end: %u\n", start, end);
+	
+	puts("------------");
+	print_llist(&list, 1);
+	puts("------------");
+	print_llist(&into, 1);
+
+	int check = list.first->val == e1 && list.last->val == e4 && into.first->val == e5 && into.last->val == e5;
+	//int check = list.first == NULL && list.last == NULL && into.first->val == e1 && into.last->val == e5;
+	if (check) puts("Test passed");
+	else puts("Test failed");
+
+	llist_destroy_contents(&list);
+	llist_destroy_contents(&into);
 	return 0;
 }
