@@ -211,34 +211,52 @@ int llist_disconnect(llist *list, llist *into, size_t start, size_t end)
 
 int llist_move(llist *list, size_t from, size_t to, size_t where)
 {	//indexing is from 0, moves range defined by 'from':'to' of nodes
-	//into place starting at index 'where'
+	//into place starting at index 'where' + 1 (for now)
 	
 	//WORK IN PROGRESS
 	if (!list || from > to) return -1;
-	
-	struct node *where_node = llist_nth_node(list, where);
-	if (!where_node)
+
+	if (where >= from && where <= to)
 	{
-		//TODO err
+		//inside of the moved list is for now disabled
 		return 1;
+	}
+	
+	struct node *where_node_prev = NULL;
+	if (where)
+	{
+		if (where - 1 == to) return 0; //this means that we dont have to do anyhting
+		where_node_prev = llist_nth_node(list, where - 1);	
+		if (!where_node_prev)
+		{
+			//TODO err	
+			return 2;
+		}
 	}
 	
 	size_t moved_start = from, moved_end = to;
 	llist moved = { NULL, NULL };
 	
-	if (where >= from && where <= to)
-	{
-		//TODO inside of moved list
-	}
-	
 	int diserr = llist_disconnect(list, &moved, moved_start, moved_end);
 	if (diserr)
 	{
 		//TODO err
-		return 2;
+		return 3;
 	}
 	//moved now shouldnt contain NULL pointers, right?
-
+	//as we always select nonempty section of linkedlist
+	if (!where_node_prev)
+	{
+		moved.last->next = list->first;
+		list->first = moved.first;
+	}
+	else
+	{
+		moved.last->next = where_node_prev->next;
+		where_node_prev->next = moved.first;
+	}
+	
+	if (list->last == where_node_prev) list->last = moved.last;
 	
 	return 0;
 }

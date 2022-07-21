@@ -24,7 +24,7 @@ int main2()
 	*e3 = malloc(sizeof(todo_entry_t)),
 	*e4 = malloc(sizeof(todo_entry_t)),
 	*e5 = malloc(sizeof(todo_entry_t));
-	llist list = { NULL, NULL }, into = { NULL, NULL };
+	llist list = { NULL, NULL };
 	strcpy((char*)e1->text_buffer, "prvni");
 	strcpy((char*)e2->text_buffer, "druhy");
 	strcpy((char*)e3->text_buffer, "treti");
@@ -38,7 +38,7 @@ int main2()
 
 	print_llist(&list, 1);
 	
-	int err = llist_disconnect(&list, &into, 4, 4);
+	int err = llist_move(&list, 4, 4, 1);
 	if (err)
 	{
 		printf("Error: %d\n", err);
@@ -47,15 +47,12 @@ int main2()
 	
 	puts("------------");
 	print_llist(&list, 1);
-	puts("------------");
-	print_llist(&into, 1);
 
-	int check = list.first->val == e1 && list.last->val == e4 && into.first->val == e5 && into.last->val == e5;
+	/*int check = list.firsts>val == e1 && list.last->val == e4 && into.first->val == e5 && into.last->val == e5;
 	//int check = list.first == NULL && list.last == NULL && into.first->val == e1 && into.last->val == e5;
 	if (check) puts("Test passed");
-	else puts("Test failed");
+	else puts("Test failed");*/
 
 	llist_destroy_contents(&list);
-	llist_destroy_contents(&into);
 	return 0;
 }

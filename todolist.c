@@ -384,10 +384,10 @@ int cmd_move(llist *list, char *data_buffer)
 	size_t from = 0, to = 0;
 	if (parse_range(data_buffer, &from, &to, &data_buffer))
 	{
-		//TODO move the data_buffer pointer
 		from = atoi(data_buffer);
 		to = from;
 	}
+	//TODO move the data_buffer pointer for loading where
 	
 	if (!from || !to)
 	{
@@ -400,6 +400,13 @@ int cmd_move(llist *list, char *data_buffer)
 	{
 		//TODO err
 		return 2;
+	}
+	
+	int move_err = llist_move(list, from, to, where);
+	if (move_err)
+	{
+		//TODO err, probably switch statement
+		return 3;
 	}
 	
 	return 0;

@@ -86,6 +86,8 @@ void llist_clear(llist *list, int status);
 
 int llist_disconnect(llist *list, llist *into, size_t start, size_t end);
 
+int llist_move(llist *list, size_t from, size_t to, size_t where);
+
 //todolist_load.c
 int isseparator(int c);
 
