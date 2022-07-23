@@ -370,43 +370,52 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose) //TODO
 }
 
 int cmd_move(llist *list, char *data_buffer)
-{	//TODO
+{	//TODO errors
 	if (!list || !data_buffer)
 	{
 		//TODO probably bad as the interactive while loops continues
-		fprintf(stderr, "Err: Program passed NULL pointer into change command! Ignoring this command...\n");
+		fprintf(stderr, "Err: Program passed NULL pointer into move command! Ignoring this command...\n");
 		return -1;
 	}
-	
-	printf("to be done\n");
-	if (1) return 0;
 	
 	size_t from = 0, to = 0;
 	if (parse_range(data_buffer, &from, &to, &data_buffer))
 	{
 		from = atoi(data_buffer);
 		to = from;
+		
+		data_buffer = string_num_end(data_buffer, NULL);
 	}
-	//TODO move the data_buffer pointer for loading where
 	
 	if (!from || !to)
 	{
-		//TODO err
+		fprintf(stderr, "Err: wrong moved range or index specified in the move command!\n");
 		return 1;
 	}
 	
 	size_t where = atoi(data_buffer);
 	if (!where)
 	{
-		//TODO err
+		fprintf(stderr, "Err: wrong destination index to be moved to specified in the move command!\n");
 		return 2;
 	}
+	data_buffer = string_num_end(data_buffer, NULL);
 	
-	int move_err = llist_move(list, from, to, where);
+	while (*data_buffer && isspace((int)*data_buffer)) data_buffer++;
+	if (*data_buffer) //this means that there is still some nonempty text after where number
+	{
+		fprintf(stderr, "Err: there's unexpected text after index/range and index in the move command!\n");
+		return 3;
+	}
+	
+	//printf("From: %u to: %u where: %u\n", from, to, where);
+	
+	int move_err = llist_move(list, from - 1, to - 1, where - 1); //-1 as llist index from 0
 	if (move_err)
 	{
 		//TODO err, probably switch statement
-		return 3;
+		fprintf(stderr, "Err: failed to move specified entries in the move command! Err code: %d\n", move_err);
+		return 4;
 	}
 	
 	return 0;
