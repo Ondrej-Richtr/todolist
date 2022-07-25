@@ -413,8 +413,25 @@ int cmd_move(llist *list, char *data_buffer)
 	int move_err = llist_move(list, from - 1, to - 1, where - 1); //-1 as llist index from 0
 	if (move_err)
 	{
-		//TODO err, probably switch statement
-		fprintf(stderr, "Err: failed to move specified entries in the move command! Err code: %d\n", move_err);
+		switch (move_err)
+		{
+			case -1:
+				fprintf(stderr, "Err: Start '%u' of a range can't be bigger than the end '%u'!\n", from, to);
+				break;
+			case 1:
+				fprintf(stderr, "Err: Can't move entries to index pointing on themselves!\n");
+				break;
+			case 2:
+				fprintf(stderr, "Err: The index '%u' is out of bounds!\n", where);
+				break;
+			case 3: //TODO make this be printed insed of llist_move
+				fprintf(stderr, "Err: Move command couldn't move specified range '%u-%u'!\n", from, to);
+				break;
+			default:
+				fprintf(stderr, "Err: Unexpected error in the move command!\n");
+				break;
+		}
+		//fprintf(stderr, "Err: failed to move specified entries in the move command! Err code: %d\n", move_err);
 		return 4;
 	}
 	

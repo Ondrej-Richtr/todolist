@@ -216,33 +216,24 @@ int llist_move(llist *list, size_t from, size_t to, size_t where)
 	//WORK IN PROGRESS
 	if (!list || from > to) return -1;
 
-	if (where >= from && where <= to)
-	{
-		//inside of the moved list is for now disabled
-		return 1;
-	}
+	//inside of the moved list is not allowed (this will probably stay)
+	if (where >= from && where <= to) return 1;
 	
 	struct node *where_node_prev = NULL;
 	if (where)
 	{
 		if (where - 1 == to) return 0; //this means that we dont have to do anyhting
+		
 		where_node_prev = llist_nth_node(list, where - 1);	
-		if (!where_node_prev)
-		{
-			//TODO err	
-			return 2;
-		}
+		if (!where_node_prev) return 2;
 	}
 	
 	size_t moved_start = from, moved_end = to;
 	llist moved = { NULL, NULL };
 	
 	int diserr = llist_disconnect(list, &moved, moved_start, moved_end);
-	if (diserr)
-	{
-		//TODO err
-		return 3;
-	}
+	if (diserr) return 3;
+
 	//moved now shouldnt contain NULL pointers, right?
 	//as we always select nonempty section of linkedlist
 	if (!where_node_prev)
