@@ -363,8 +363,7 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose)
 	//change the old entry into new one
 	*old_entry = new_entry;
 	
-	//TODO maybe typo in success
-	if (is_verbose) printf("The #%u entry was changed successfuly\n", num);
+	if (is_verbose) printf("The #%u entry was changed successfully\n", num);
 	
 	return 0;
 }
@@ -437,6 +436,87 @@ int cmd_move(llist *list, char *data_buffer)
 	return 0;
 }
 
+int cmd_help(char *data_buffer)
+{
+	if (!data_buffer)
+	{
+		//TODO probably bad as the interactive while loops continues
+		fprintf(stderr, "Err: Program passed NULL pointer into help command! Ignoring this command...\n");
+		return -1;
+	}
+	
+	size_t index = 0;
+	
+	while (data_buffer[index] && isspace(data_buffer[index])) index++; //skipping the whitespaces
+	
+	if (!data_buffer[index])
+	{
+		print_help();
+		return 0;
+	}
+	
+	char *cmd_start = data_buffer + index;
+	
+	while (data_buffer[index] && isalpha(data_buffer[index])) index++; //skipping to the end of word
+	data_buffer[index] = '\0';
+	
+	enum CmdType cmd = help_c; //placeholder
+	if (!parse_cmd_type(cmd_start, &cmd))
+	{
+		fprintf(stderr, "Err: Unknown command: '%s'! Type 'help' to get list of all known commands.\n", cmd_start);
+		return 1;
+	}
+	
+	switch(cmd) //TODO help print for each command
+	{
+	case help_c:
+		puts("Command 'help' prints list of all implemented commands and their short description.");
+		puts("Using 'help COMMAND' where COMMAND is valid command, you can get detailed help for given command.");
+		puts("Example - 'help change'");
+		break;
+	case print_c:
+		puts("Command 'print' prints the list of all todo-list entries in current memory in style INDEX	[Y]/[N]|DEADLINE|TEXT, where DEADLINE is in format: DAY. MONTH. YEAR");
+		//puts("You can also specify the style of printing by numbers 0, 1, 2, 3, 4, 5 where 0 means simple print up to 5 meaning detailed print.");
+		puts("Example - 'print'");
+		break;
+	case add_c:
+		puts("Command 'add' adds new entry in the todo-list in current memory. You can either write this new entry on the same line as 'add' or on the next line.");
+		puts("The input formatting is: X|DEADLINE|TEXT, where X is optional to mark this entry as done, DEADLINE is in format: DAY. MONTH. YEAR and is also optional, TEXT is obligatory and should be nonempty.");
+		puts("Example - 'add X|Writing documentation' or 'add 6. 9. 2022|My birthday, yay'");
+		break;
+	case del_c:
+		puts("Command 'delete' deletes one or more entries from todo-list loaded in current memory.");
+		puts("You specify which entries to delete by writing their index (indexing from 1) and splitting them with any combination of characters '|' or a space.");
+		puts("If you write more entries to be deleted then they must be in ascending order.");
+		puts("Example - 'delete 2' or 'delete 1|2 3 8 | 11'");
+		break;
+	case mark_c:
+		puts("Command 'mark' marks specified entries in current todo-list as done/undone.");
+		puts("To mark them as done write 'mark done' and to mark them undone write 'mark undone', after that write list of indices of entries that you want to mark in ascending order. You can separate them either with '|' or a space.");
+		puts("Example - 'mark done 3' or 'mark undone 1|2 3 8 | 11");
+		break;
+	case clear_c:
+		puts("Command 'clear' deletes all entries in current todo-list that are either done or undone or all of them.");
+		puts("You can specify which type to delete by writing 'clear done' or 'clear undone' or 'clear all'.");
+		puts("Example - 'clear done'");
+		break;
+	case change_c:
+		puts("Command 'change' allows you to change specified entry. You specify which entry to change by writing it's index.");
+		puts("The entry then gets replaced by new entry that you will write on new line in the same formatting as in 'add' command.");
+		puts("Example - 'change 7' followed by '12. 8. 2013|This is the replacement!'");
+		break;
+	case move_c:
+		puts("Command 'move' moves one or range of entries to different index.");
+		puts("Format is WHICH WHERE for moving entry at index WHICH to index WHERE, or START-END WHERE for moving range of entries starting at START and ending at END to index WHERE.");
+		puts("WHERE can also be index one higher than max. index - this moves specified entries at the end of the todo-list.");
+		puts("Example - 'move 3 7' or 'move 7-10 3'");
+		break;
+	}
+	
+	puts("There will soon be help for each command!");
+	return 0;
+}
+
 int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 {	/*calls correct functionality specified by command type argument
 	passes in buffer if the function requires it
@@ -444,7 +524,7 @@ int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 	returns non-zero if the command couldn't be executed successfuly*/
 	switch (type)
 	{
-		case help_c: print_help();
+		case help_c: cmd_help(buffer);
 		break;
 		case print_c: print_llist(list, 1);
 		break;
