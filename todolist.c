@@ -297,7 +297,7 @@ int cmd_clear(llist *list, char *data_buffer)
 	return 1;
 }
 
-int cmd_change(llist *list, char *data_buffer, int is_verbose) //TODO
+int cmd_change(llist *list, char *data_buffer, int is_verbose)
 {
 	if (!list || !data_buffer)
 	{
@@ -370,7 +370,7 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose) //TODO
 }
 
 int cmd_move(llist *list, char *data_buffer)
-{	//TODO errors
+{
 	if (!list || !data_buffer)
 	{
 		//TODO probably bad as the interactive while loops continues
@@ -424,14 +424,13 @@ int cmd_move(llist *list, char *data_buffer)
 			case 2:
 				fprintf(stderr, "Err: The index '%u' is out of bounds!\n", where);
 				break;
-			case 3: //TODO make this be printed insed of llist_move
+			case 3: //TODO make this be printed instead of llist_move
 				fprintf(stderr, "Err: Move command couldn't move specified range '%u-%u'!\n", from, to);
 				break;
 			default:
 				fprintf(stderr, "Err: Unexpected error in the move command!\n");
 				break;
 		}
-		//fprintf(stderr, "Err: failed to move specified entries in the move command! Err code: %d\n", move_err);
 		return 4;
 	}
 	
@@ -619,6 +618,7 @@ void print_help()
 	puts("\t'mark done/undone' - marks specified entries as done/undone");
 	puts("\t'clear all/done/undone' - clears all/done/undone todolist entries");
 	puts("\t'change' - changes one existing entry that you specify");
+	puts("\t'move' - moves on or range of entries to specified index");
 	puts("------------------------------");	
 }
 
