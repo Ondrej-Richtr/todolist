@@ -88,6 +88,8 @@ int llist_disconnect(llist *list, llist *into, size_t start, size_t end);
 
 int llist_move(llist *list, size_t from, size_t to, size_t where);
 
+int llist_swap(llist *list, size_t idx1, size_t idx2);
+
 //todolist_load.c
 int isseparator(int c);
 
@@ -136,7 +138,7 @@ int write_one_entry(FILE *f, todo_entry_t *entry);
 int write_entries(FILE *f, llist *list);
 
 //todolist.c
-enum CmdType{ help_c, print_c, add_c, del_c, mark_c, clear_c, change_c, move_c };
+enum CmdType{ help_c, print_c, add_c, del_c, mark_c, clear_c, change_c, move_c, swap_c };
 enum SpecType{ all_c, done_c, undone_c};
 
 //time handling:

@@ -369,7 +369,7 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose)
 }
 
 int cmd_move(llist *list, char *data_buffer)
-{
+{	//TODO moving up and down (maybe)
 	if (!list || !data_buffer)
 	{
 		//TODO probably bad as the interactive while loops continues
@@ -511,9 +511,44 @@ int cmd_help(char *data_buffer)
 		puts("WHERE can also be index one higher than max. index - this moves specified entries at the end of the todo-list.");
 		puts("Example - 'move 3 7' or 'move 7-10 3'");
 		break;
+	case swap_c:
+		puts("Command 'swap' swaps two entries in todo-list.");
+		puts("You need to specify two valid indices refering to those entries that will be swapped.");
+		puts("Example - 'swap 1 2' or 'swap 18  9'");
+		break;
+	default:
+		printf("Help for command: '%s' is not implemented yet or something wrong happened!\n", cmd_start);
+		break;
 	}
 	
-	puts("There will soon be help for each command!");
+	return 0;
+}
+
+int cmd_swap(llist *list, char *data_buffer)
+{
+	if (!data_buffer)
+	{
+		//TODO probably bad as the interactive while loops continues
+		fprintf(stderr, "Err: Program passed NULL pointer into swap command! Ignoring this command...\n");
+		return -1;
+	}
+	
+	char *scnd_number = string_num_end(data_buffer, &data_buffer);
+	size_t idx1 = atoi(data_buffer), idx2 = atoi(scnd_number);
+
+	if (!idx1 || !idx2)
+	{
+		fprintf(stderr, "Err: Not enough indices or wrong format specified in swap command!\n");
+		return 1;
+	}
+	
+	int swap_err = llist_swap(list, idx1 - 1, idx2 - 1);
+	if (swap_err) //ignoring swap_err for now
+	{
+		fprintf(stderr, "Err: One or both indices '%u' '%u' are out of bounds!\n", idx1, idx2);
+		return 2;
+	}
+	
 	return 0;
 }
 
@@ -534,6 +569,7 @@ int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 		case clear_c: return cmd_clear(list, buffer);
 		case change_c: return cmd_change(list, buffer, 1); //1 is for verbose mode (default in interactive)
 		case move_c: return cmd_move(list, buffer);
+		case swap_c: return cmd_swap(list, buffer);
 		default: //this shouldn't normally happen
 		fprintf(stderr, "Err: Wrong command type specified '%d' in command caller!\n", type);
 		return 1;
@@ -603,6 +639,7 @@ int parse_cmd_type(char *cmd, enum CmdType *type_ptr)
 	else if (!strcmp("clear", cmd)) *type_ptr = clear_c;
 	else if (!strcmp("change", cmd)) *type_ptr = change_c;
 	else if (!strcmp("move", cmd)) *type_ptr = move_c;
+	else if (!strcmp("swap", cmd)) *type_ptr = swap_c;
 	else return 0;
 	return 1;
 }
@@ -699,6 +736,7 @@ void print_help()
 	puts("\t'clear all/done/undone' - clears all/done/undone todolist entries");
 	puts("\t'change' - changes one existing entry that you specify");
 	puts("\t'move' - moves on or range of entries to specified index");
+	puts("\t'swap' - swaps two specified entries in current todolist");
 	puts("------------------------------");	
 }
 

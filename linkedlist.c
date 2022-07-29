@@ -251,3 +251,36 @@ int llist_move(llist *list, size_t from, size_t to, size_t where)
 	
 	return 0;
 }
+
+int llist_swap(llist *list, size_t idx1, size_t idx2)
+{	//swaps entries on given indices, if they are out of bounds then returns nonzero
+	//indexing is from zero
+	if (!list) return -1;
+	
+	size_t min = idx1, max = idx2, index = 0;
+	if (idx1 > idx2)
+	{
+		min = idx2;
+		max = idx1;
+	}
+	else if (idx1 == idx2) return 0; //nothing to swap
+
+	struct node *min_node = NULL, *max_node = NULL, *current = list->first;
+
+	for (; current && index < min; index++) current = current->next;
+	
+	if (!current) return 1; //out of bounds
+	min_node = current;
+	
+	for (; current && index < max; index++) current = current->next;
+
+	if (!current) return 2; //out of bounds
+	max_node = current;
+	
+	//swaping
+	todo_entry_t *tmp = min_node->val;
+	min_node->val = max_node->val;
+	max_node->val = tmp;	
+
+	return 0;
+}
