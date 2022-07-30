@@ -1,5 +1,6 @@
 #include "todolist.h"
 
+#define PRINT_DEFAULT 3
 
 //declarations:
 int is_date_valid(const date_t date);
@@ -136,6 +137,60 @@ int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size
 		//repetitive skipping to the next number to load
 		while (string[i] != '\0' && !(isseparator(string[i]) || isspace(string[i]))) i++;
 		while (isseparator(string[i]) || isspace(string[i])) i++;
+	}
+	
+	return 0;
+}
+
+void print_todoentry(FILE *out, const todo_entry_t entry, const int style)
+{	//prints todo entry into file 'out', if out is NULL then it does nothing
+	if (!out) return;
+	
+	if (style)
+	{
+		//done/undone
+		if (entry.status) fputs("[Y] ", out);
+		else fputs("[N] ", out);
+		
+		//deadline
+		if (style >= 2 && (is_date_valid(entry.deadline) || style >= 4))
+		{
+			write_date(out, entry.deadline);
+			fputs(" | ", out);
+		}
+		
+		//created date
+		if (style >= 5)
+		{
+			write_date(out, entry.created_date);
+			fputs(" | ", out);
+		}
+	}
+	
+	fputs(entry.text_buffer, out);
+}
+
+int cmd_print(llist *list, int style)
+{	/*	style 0 - just the entry text
+		style 1 - entry text, done/undone
+		style 2 - entry text, done/undone, valid deadlines
+		style 3 - entry text, done/undone, valid deadlines, index (from 1)
+		style 4 - entry text, done/undone, all deadlines, index
+		style 5 - entry text, done/undone, all deadlines, all created date, index*/
+	
+	if (!list) //TODO check for style bounds?
+	{
+		//TODO probably bad as the interactive while loops continues
+		fprintf(stderr, "Err: Program passed NULL pointer into print command! Ignoring this command...\n");
+		return -1;
+	}
+	
+	size_t num = 1;
+	for (struct node *n = list->first; n != NULL; n = n->next)
+	{
+		if (style > 2) printf("%u\t", num++);
+		print_todoentry(stdout, *(n->val), style);
+		putchar('\n');
 	}
 	
 	return 0;
@@ -388,14 +443,36 @@ int cmd_move(llist *list, char *data_buffer)
 	
 	if (!from || !to)
 	{
-		fprintf(stderr, "Err: wrong moved range or index specified in the move command!\n");
+		fprintf(stderr, "Err: Wrong moved range or index specified in the move command!\n");
 		return 1;
 	}
+
+	//skipping whitespaces until next number or up/down
+	while (*data_buffer && isspace((int)*data_buffer)) data_buffer++;
+	
+	size_t dir_offset = 0;
+	int dir = parse_direction(data_buffer, &dir_offset);
+	data_buffer += dir_offset; //if there is dir parsed it will offset data_buffer to point after it
 	
 	size_t where = atoi(data_buffer);
+
+	//moving relatively up
+	if (dir == 1)
+	{
+		if (!where) return 0; //nothing to do (we are moving 0 up)
+		if (from <= where)
+		{
+			fprintf(stderr, "Err: Move command tries to move out of bounds!\n");
+			return 5;
+		}
+		where = from - where;
+	}
+	//moving relatively down
+	else if (dir == 2) where = to + where + 1;
+	
 	if (!where)
 	{
-		fprintf(stderr, "Err: wrong destination index to be moved to specified in the move command!\n");
+		fprintf(stderr, "Err: Wrong destination index to be moved to specified in the move command!\n");
 		return 2;
 	}
 	data_buffer = string_num_end(data_buffer, NULL);
@@ -403,12 +480,10 @@ int cmd_move(llist *list, char *data_buffer)
 	while (*data_buffer && isspace((int)*data_buffer)) data_buffer++;
 	if (*data_buffer) //this means that there is still some nonempty text after where number
 	{
-		fprintf(stderr, "Err: there's unexpected text after index/range and index in the move command!\n");
+		fprintf(stderr, "Err: There's unexpected text after index/range and index in the move command!\n");
 		return 3;
 	}
-	
-	//printf("From: %u to: %u where: %u\n", from, to, where);
-	
+
 	int move_err = llist_move(list, from - 1, to - 1, where - 1); //-1 as llist index from 0
 	if (move_err)
 	{
@@ -421,9 +496,10 @@ int cmd_move(llist *list, char *data_buffer)
 				fprintf(stderr, "Err: Can't move entries to index pointing on themselves!\n");
 				break;
 			case 2:
-				fprintf(stderr, "Err: The index '%u' is out of bounds!\n", where);
+				if (!dir) fprintf(stderr, "Err: The index '%u' is out of bounds!\n", where);
+				else fprintf(stderr, "Err: Move command tries to move out of bounds!\n");
 				break;
-			case 3: //TODO make this be printed instead of llist_move
+			case 3: //TODO make this be printed instead in llist_move
 				fprintf(stderr, "Err: Move command couldn't move specified range '%u-%u'!\n", from, to);
 				break;
 			default:
@@ -434,6 +510,24 @@ int cmd_move(llist *list, char *data_buffer)
 	}
 	
 	return 0;
+}
+
+void print_help()
+{
+	//some basic help print
+	//TODO print detailed help for each specific command
+	puts("-------------HELP-------------");
+	puts("Interactive mode commands are:");
+	puts("\t'help' - prints this help on stdout");
+	puts("\t'print' - prints all todolist entries in current memory on stdout");
+	puts("\t'add' - adds one new entry into current todolist");
+	puts("\t'delete' - deletes specified entries from current todolist");
+	puts("\t'mark done/undone' - marks specified entries as done/undone");
+	puts("\t'clear all/done/undone' - clears all/done/undone todolist entries");
+	puts("\t'change' - changes one existing entry that you specify");
+	puts("\t'move' - moves one or range of entries to specified index or relatively");
+	puts("\t'swap' - swaps two specified entries in current todolist");
+	puts("------------------------------");	
 }
 
 int cmd_help(char *data_buffer)
@@ -506,10 +600,11 @@ int cmd_help(char *data_buffer)
 		puts("Example - 'change 7' followed by '12. 8. 2013|This is the replacement!'");
 		break;
 	case move_c:
-		puts("Command 'move' moves one or range of entries to different index.");
-		puts("Format is WHICH WHERE for moving entry at index WHICH to index WHERE, or START-END WHERE for moving range of entries starting at START and ending at END to index WHERE.");
+		puts("Command 'move' moves one or range of entries to different index or relatively up/down.");
+		puts("Format for absolute move is WHICH WHERE for moving entry at index WHICH to index WHERE, or START-END WHERE for moving range of entries starting at START and ending at END to index WHERE.");
+		puts("Format for relative move is similar WHICH up/down AMOUNT or START-END up/down AMOUNT, up/down specifies direction of move and AMOUNT specifies how much.");
 		puts("WHERE can also be index one higher than max. index - this moves specified entries at the end of the todo-list.");
-		puts("Example - 'move 3 7' or 'move 7-10 3'");
+		puts("Example - 'move 3 7' or 'move 7-10 3' or 'move 18-20 up 6' or 'move 7 down 1'");
 		break;
 	case swap_c:
 		puts("Command 'swap' swaps two entries in todo-list.");
@@ -526,7 +621,7 @@ int cmd_help(char *data_buffer)
 
 int cmd_swap(llist *list, char *data_buffer)
 {
-	if (!data_buffer)
+	if (!list || !data_buffer)
 	{
 		//TODO probably bad as the interactive while loops continues
 		fprintf(stderr, "Err: Program passed NULL pointer into swap command! Ignoring this command...\n");
@@ -559,10 +654,8 @@ int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 	returns non-zero if the command couldn't be executed successfuly*/
 	switch (type)
 	{
-		case help_c: cmd_help(buffer);
-		break;
-		case print_c: print_llist(list, 1);
-		break;
+		case help_c: return cmd_help(buffer);
+		case print_c: return cmd_print(list, PRINT_DEFAULT);
 		case add_c: return cmd_add(list, buffer);
 		case del_c: return llist_asc_index_map(list, buffer, delete_entry);
 		case mark_c: return cmd_mark(list, buffer);
@@ -574,7 +667,26 @@ int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 		fprintf(stderr, "Err: Wrong command type specified '%d' in command caller!\n", type);
 		return 1;
 	}
-	return 0;
+	return 0; //should not happen at this point
+}
+
+int parse_direction(const char *string, size_t *end_index)
+{	//returns 1 if up, 2 if down, else returns 0
+	//expects the potential 'up'/'down' to begin at index 0
+	//if end_end is non-NULL it sets it at first char after possible 'up'/'down'
+	if (!string[0] || !string[1] || (string[0] != 'u' && string[0] != 'd')) return 0;
+	if (string[1] == 'p') //must be 'up' at the beginning
+	{
+		if (end_index) *end_index = 2; //setting the end_index
+		return 1;
+	}
+	else if (string[1] != 'o') return 0;
+	
+	if (!string[2] || !string[3] || string[2] != 'w' || string[3] != 'n') return 0;
+	
+	//must be 'down' at the beginning
+	if (end_index) *end_index = 4; 	//setting the end_index
+	return 2;
 }
 
 int parse_range(char *string, size_t *start, size_t *end, char **range_end)
@@ -630,7 +742,7 @@ int parse_cmd_type(char *cmd, enum CmdType *type_ptr)
 {	//returns zero if not supported type, otherwise returns 1
 	//and fills type_ptr with correct type
 
-	//TODO more effective way
+	//IDEA more effective way
 	if (!strcmp("help", cmd)) *type_ptr = help_c;
 	else if (!strcmp("print", cmd))	*type_ptr = print_c;
 	else if (!strcmp("add", cmd)) *type_ptr = add_c;
@@ -719,54 +831,4 @@ int interactive_mode(FILE *input, const char *todo_file_path)
 	fclose(out_file);
 	llist_destroy_contents(&list);
 	return write_err;
-}
-
-//outputting
-void print_help()
-{
-	//some basic help print
-	//TODO print detailed help for each specific command
-	puts("-------------HELP-------------");
-	puts("Interactive mode commands are:");
-	puts("\t'help' - prints this help on stdout");
-	puts("\t'print' - prints all todolist entries in current memory on stdout");
-	puts("\t'add' - adds one new entry into current todolist");
-	puts("\t'delete' - deletes specified entries from current todolist");
-	puts("\t'mark done/undone' - marks specified entries as done/undone");
-	puts("\t'clear all/done/undone' - clears all/done/undone todolist entries");
-	puts("\t'change' - changes one existing entry that you specify");
-	puts("\t'move' - moves on or range of entries to specified index");
-	puts("\t'swap' - swaps two specified entries in current todolist");
-	puts("------------------------------");	
-}
-
-void print_todoentry(FILE *out, const todo_entry_t entry, int style)
-{	//prints todo entry into file 'out', if out is NULL then it does nothing
-	if (!out) return;
-	
-	//TODO style
-	if (style)
-	{
-		if (entry.status) fputs("[Y] ", out);
-		else fputs("[N] ", out);
-		
-		if (is_date_valid(entry.deadline))
-		{
-			write_date(out, entry.deadline);
-			fputs(" | ", out);
-		}
-	}
-	
-	fputs(entry.text_buffer, out);
-}
-
-void print_llist(llist *list, int style)
-{
-	size_t num = 1;
-	for (struct node *n = list->first; n != NULL; n = n->next)
-	{
-		if (style) printf("%u\t", num++);
-		print_todoentry(stdout, *(n->val), style);
-		putchar('\n');
-	}
 }

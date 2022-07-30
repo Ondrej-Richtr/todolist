@@ -212,8 +212,6 @@ int llist_disconnect(llist *list, llist *into, size_t start, size_t end)
 int llist_move(llist *list, size_t from, size_t to, size_t where)
 {	//indexing is from 0, moves range defined by 'from':'to' of nodes
 	//into place starting at index 'where' + 1 (for now)
-	
-	//WORK IN PROGRESS
 	if (!list || from > to) return -1;
 
 	//inside of the moved list is not allowed (this will probably stay)

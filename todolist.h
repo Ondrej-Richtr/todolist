@@ -95,7 +95,6 @@ int isseparator(int c);
 
 void skip_until(FILE *f, int *in_char, char until);
 
-//size_t copy_until_sep(size_t max_size, char buffer[max_size + 1], char* source);
 size_t copy_until_delimiter(size_t max_size, char buffer[max_size + 1], const char* source, int(*delim)(int));
 
 char* next_word_skip(char *string);
@@ -144,7 +143,9 @@ enum SpecType{ all_c, done_c, undone_c};
 //time handling:
 date_t get_current_date();
 
-//parsing enums:
+//parsing enums and specifiers:
+int parse_direction(const char *string, size_t *end_index);
+
 int parse_cmd_type(char *cmd, enum CmdType *type_ptr);
 
 int parse_specifier_type(char *string, enum SpecType *spec_ptr);
@@ -154,11 +155,11 @@ int generate_entry_splitted(todo_entry_t *entry, const char status, const date_t
 
 int generate_entry_from_string(const char* string, todo_entry_t *entry);
 
-/*int add_entry_string(llist *list, char* string);
-
-int add_entry_splitted(llist *list, char status, date_t orig_date, char *dead_date, char *text);*/
-
 int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size_t, size_t));
+
+void print_todoentry(FILE *out, const todo_entry_t entry, const int style);
+
+int cmd_print(llist *list, int style);
 
 int cmd_add(llist *list, char *data_buffer);
 
@@ -170,13 +171,12 @@ int cmd_clear(llist *list, char *data_buffer);
 
 int cmd_change(llist *list, char *data_buffer, int is_verbose);
 
+int cmd_move(llist *list, char *data_buffer);
+
+int cmd_help(char *data_buffer);
+
+int cmd_swap(llist *list, char *data_buffer);
+
 int parse_range(char *string, size_t *start, size_t *end, char **range_end);
 
 int interactive_mode(FILE *input, const char *todo_file_path);
-
-//outputting
-void print_help();
-
-void print_todoentry(FILE *out, const todo_entry_t entry, int style);
-
-void print_llist(llist *list, int style);
