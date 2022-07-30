@@ -170,21 +170,13 @@ void print_todoentry(FILE *out, const todo_entry_t entry, const int style)
 	fputs(entry.text_buffer, out);
 }
 
-int cmd_print(llist *list, int style)
+void print_todolist(const llist *list, const int style)
 {	/*	style 0 - just the entry text
 		style 1 - entry text, done/undone
 		style 2 - entry text, done/undone, valid deadlines
 		style 3 - entry text, done/undone, valid deadlines, index (from 1)
 		style 4 - entry text, done/undone, all deadlines, index
 		style 5 - entry text, done/undone, all deadlines, all created date, index*/
-	
-	if (!list) //TODO check for style bounds?
-	{
-		//TODO probably bad as the interactive while loops continues
-		fprintf(stderr, "Err: Program passed NULL pointer into print command! Ignoring this command...\n");
-		return -1;
-	}
-	
 	size_t num = 1;
 	for (struct node *n = list->first; n != NULL; n = n->next)
 	{
@@ -192,7 +184,29 @@ int cmd_print(llist *list, int style)
 		print_todoentry(stdout, *(n->val), style);
 		putchar('\n');
 	}
+}
+
+int cmd_print(llist *list, char *data_buffer)
+{
+	if (!list)
+	{
+		//TODO probably bad as the interactive while loops continues
+		fprintf(stderr, "Err: Program passed NULL pointer into print command! Ignoring this command...\n");
+		return -1;
+	}
 	
+	int style = PRINT_DEFAULT;
+	//skips to the end of data_buffer or start of a number
+	while (*data_buffer && !isdigit((int)*data_buffer)) data_buffer++;
+	if (*data_buffer) style = atoi(data_buffer); //only if there is a number
+	
+	if (style < 0 || style > 5)
+	{
+		fprintf(stderr, "Err: Undefined style '%d' in print command!\n", style);
+		return 1;
+	}
+	
+	print_todolist(list, style);
 	return 0;
 }
 
@@ -569,9 +583,10 @@ int cmd_help(char *data_buffer)
 		puts("Example - 'help change'");
 		break;
 	case print_c:
-		puts("Command 'print' prints the list of all todo-list entries in current memory in style INDEX	[Y]/[N]|DEADLINE|TEXT, where DEADLINE is in format: DAY. MONTH. YEAR");
-		//puts("You can also specify the style of printing by numbers 0, 1, 2, 3, 4, 5 where 0 means simple print up to 5 meaning detailed print.");
-		puts("Example - 'print'");
+		puts("Command 'print' prints the list of all todo-list entries in current memory.");
+		puts("You can also specify the style of printing by numbers from 0 - the simplistic print, up to 5 - the most detailed print, the default is 3.");
+		puts("The information you can get from print is: entry index, Y/N meaning done/undone, deadline date, date of creation of this entry, entry text.");
+		puts("Example - 'print' or 'print 1'");
 		break;
 	case add_c:
 		puts("Command 'add' adds new entry in the todo-list in current memory. You can either write this new entry on the same line as 'add' or on the next line.");
@@ -655,7 +670,7 @@ int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 	switch (type)
 	{
 		case help_c: return cmd_help(buffer);
-		case print_c: return cmd_print(list, PRINT_DEFAULT);
+		case print_c: return cmd_print(list, buffer);
 		case add_c: return cmd_add(list, buffer);
 		case del_c: return llist_asc_index_map(list, buffer, delete_entry);
 		case mark_c: return cmd_mark(list, buffer);

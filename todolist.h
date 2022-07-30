@@ -159,7 +159,9 @@ int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size
 
 void print_todoentry(FILE *out, const todo_entry_t entry, const int style);
 
-int cmd_print(llist *list, int style);
+void print_todolist(const llist *list, const int style);
+
+int cmd_print(llist *list, char *data_buffer);
 
 int cmd_add(llist *list, char *data_buffer);
 
