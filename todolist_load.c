@@ -1,6 +1,12 @@
 #include "todolist.h"
 
 
+/*
+	WARNING FOR CODE READERS!
+	THIS .c FILE WAS WRITTEN AS ONE OF THE FIRST AND HASN'T 
+	BEEN REFACTORED YET! BEWARE OF BAD CODE QUALITY! thanks
+*/
+
 int isseparator(int c)
 {
 	return c == '|';
@@ -163,6 +169,7 @@ int load_date(FILE *f, date_t *d, int c)
 {	//loads from stream 'f' date to given 'd', first char given as 'c'
 	//returns nonzero if error occurred
 	if (!f || !d) return 1;
+	date_null(d); //nulling the date otherwise load works badly
 	
 	if (!load_num_tolerant_8(f, &(d->day), &c)) return -1;
 	c = fgetc(f);
@@ -285,6 +292,7 @@ int load_entries(llist *list, const char *path)
 	while (!status)
 	{
 		entry = malloc(sizeof(todo_entry_t));
+		memset((void*)entry, 0, sizeof(todo_entry_t)); //nulling the entry should do the job
 		if (entry == NULL)
 		{	//entry couldn't get allocated
 			fprintf(stderr, "Err: Couldn't allocate memory of %u bytes!\n", sizeof(todo_entry_t));

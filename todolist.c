@@ -841,7 +841,7 @@ int interactive_mode(FILE *input, const char *todo_file_path)
 	
 	//write_err gets ignored as if the error occurred the err msg was printed by write_entries
 	//TODO better solution, because if error then the file gets emptied and all entries are lost
-	int write_err = write_entries(out_file, &list);
+	int write_err = write_todofile(out_file, &list);
 	
 	fclose(out_file);
 	llist_destroy_contents(&list);

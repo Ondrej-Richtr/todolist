@@ -58,3 +58,25 @@ int write_entries(FILE *f, llist *list)
 	
 	return 0;
 }
+
+void write_standard_comments(FILE *f)
+{	//writes the standard comment lines at the beginning of each todofile
+	//which means after each run of this todo program only those comment lines will be in todofile
+	fputs("#Lines marked with '#' at the beginning are comments.\n", f);
+	fputs("#This file stores todo entries for todo program, you typically shouldn't modify this file directly (but it's up to you).\n", f);
+	fputs("#Note that after each run of todo program this file gets wiped out and rewritten again, which mean any other comments other then those three would get deleted.\n", f);
+}
+
+int write_todofile(FILE *f, llist *list)
+{	//writes standard comment lines and entries from list into given file
+	//returns non-zero if err and prints errmsg
+	if (!f || !list)
+	{
+		fprintf(stderr, "Err: Function writing todofile recieved NULL!\n");
+		return -1;
+	}
+	
+	write_standard_comments(f);
+	if (write_entries(f, list)) return 1; //errmsgs printed inside of write_entries
+	return 0;
+}

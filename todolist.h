@@ -136,6 +136,9 @@ int write_one_entry(FILE *f, todo_entry_t *entry);
 
 int write_entries(FILE *f, llist *list);
 
+int write_todofile(FILE *f, llist *list);
+
+
 //todolist.c
 enum CmdType{ help_c, print_c, add_c, del_c, mark_c, clear_c, change_c, move_c, swap_c };
 enum SpecType{ all_c, done_c, undone_c};
