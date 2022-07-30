@@ -1,8 +1,9 @@
 #include "todolist.h"
 
 //CHANGE OR OVERRIDE THIS MACRO IF YOU WANT DIFFERENT DEFAULT TODOFILE 
+#ifndef DEFAULT_PATH
 #define DEFAULT_PATH "./.todofile"
-
+#endif
 
 enum Option{ undef_c, file_c };
 enum Option parse_option(const char *str)
