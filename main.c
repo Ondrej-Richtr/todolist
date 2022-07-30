@@ -1,5 +1,8 @@
 #include "todolist.h"
 
+//CHANGE OR OVERRIDE THIS MACRO IF YOU WANT DIFFERENT DEFAULT TODOFILE 
+#define DEFAULT_PATH "./.todofile"
+
 
 enum Option{ undef_c, file_c };
 enum Option parse_option(const char *str)
@@ -11,9 +14,8 @@ enum Option parse_option(const char *str)
 }
 
 int parse_options(int argc, char **argv, char **path_ptr)
-{	//TODO all of the other choices, -f only works now
-	//the todo file path default:
-	*path_ptr = "./writefile";
+{	//TODO noninteractive mode (next realease I hope)
+	*path_ptr = DEFAULT_PATH; //default path if not changed by -f option
 	if (argc < 2) return 0;
 	if (argc == 2)
 	{
@@ -52,7 +54,8 @@ int main(int argc, char **argv)
 	int inter_err = interactive_mode(f, path);
 	if (inter_err)
 	{
-		fprintf(stderr, "Interactive err: %d\n", inter_err);
+		//no need to print this in release version
+		//fprintf(stderr, "Interactive err: %d\n", inter_err);
 		return EXIT_FAILURE;
 	}
 
