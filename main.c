@@ -17,8 +17,8 @@ enum Option parse_option(const char *str)
 int parse_options(int argc, char **argv, char **path_ptr)
 {	//TODO noninteractive mode (next realease I hope)
 	*path_ptr = DEFAULT_PATH; //default path if not changed by -f option
-	if (argc < 2) return 0;
-	if (argc == 2)
+	if (argc < 2 || argv[0] == NULL || argv[1] == NULL) return 0; //NULL check so we dont change env. values
+	if (argc == 2) //TODO too few arguments? bad err msg
 	{
 		fprintf(stderr, "Err: Too few arguments when launching the program!\n");
 		return 1;
@@ -43,7 +43,7 @@ int parse_options(int argc, char **argv, char **path_ptr)
 	return 0;
 }
 
-//main things
+//main stuff
 int main(int argc, char **argv)
 {
 	FILE *f = stdin;
@@ -61,4 +61,19 @@ int main(int argc, char **argv)
 	}
 
 	return EXIT_SUCCESS;
+}
+
+int main2(int argc, char **argv)
+{
+	if (argc < 2 || !argv[0] || !argv[1])
+	{
+		printf("Bad input\n");
+		return 1;
+	}
+	
+	size_t end = 0;
+	int num = str_to_num(argv[1], &end);
+	printf("Number: '%d' end: '%lu'\n", num, end);
+	
+	return 0;
 }

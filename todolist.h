@@ -93,7 +93,7 @@ int llist_swap(llist *list, size_t idx1, size_t idx2);
 //todolist_load.c
 int isseparator(int c);
 
-void skip_until(FILE *f, int *in_char, char until);
+//void skip_until(FILE *f, int *in_char, char until);
 
 size_t copy_until_delimiter(size_t max_size, char buffer[max_size + 1], const char* source, int(*delim)(int));
 
@@ -103,7 +103,9 @@ char* word_skip(char *string);
 
 size_t readline(FILE *f, size_t max_size, char buffer[max_size + 1]);
 
-void skip_comment_blank_lines(FILE *f, int *in_char);
+//void skip_comment_blank_lines(FILE *f, int *in_char);
+
+int str_to_num(const char *string, size_t *end_index);
 
 size_t load_num_8(FILE *f, uint_least8_t* num, int *in_char);
 
@@ -119,7 +121,7 @@ int load_date(FILE *f, date_t* d, int c);
 
 int load_date_string(date_t *d, char *str_start);
 
-size_t load_buffer(FILE *f, char buffer[TEXT_MAX_LEN], int *in_char);
+//size_t load_buffer(FILE *f, char buffer[TEXT_MAX_LEN], int *in_char);
 
 void strcpy_buffer(size_t buffer_size, char *buffer, const char *source);
 

@@ -282,3 +282,43 @@ int llist_swap(llist *list, size_t idx1, size_t idx2)
 
 	return 0;
 }
+
+int llist_sort(llist *list, int(*comparator)(todo_entry_t*, todo_entry_t*)) //TODO
+{
+	if (!list) return -1;
+	if (!list->first) return 0;
+	
+	struct node *sorted = list->first;
+	while (sorted->next)
+	{
+		struct node *current = sorted->next;
+		if (comparator(sorted->val, current->val) >= 0)
+		{
+			//disconnecting currently sorted node from the list
+			sorted->next = current->next;
+			current->next = NULL;
+			//correcting linked lists last pointer
+			if (list->last == current) list->last = sorted; //TODO maybe rework this?
+			
+			//finding correct spot for currently sorted node
+			struct node *check = list->first, *check_prev = NULL;
+			//TODO checking for check being NULL
+			while (comparator(check->val, current->val) >= 0)
+			{
+				check_prev = check;
+				check = check->next;
+			}
+			
+			if (!check_prev) llist_add_node_first(list, current);
+			else
+			{
+				current->next = check;
+				check_prev->next = current;
+			}
+		}
+		
+		sorted = sorted->next;
+	}
+	
+	return 0;
+}

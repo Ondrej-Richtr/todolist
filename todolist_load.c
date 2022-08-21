@@ -92,6 +92,27 @@ void skip_comment_blank_lines(FILE *f, int *in_char)
 	}
 }
 
+int str_to_num(const char *string, size_t *end_index)
+{	//skips initial whitespaces and then tries to read as much digits as possible
+	//returns numerical value of read digits, does not support negative numbers yet
+	//if no digits were read it returns zero
+	if (!string) return 0;
+	
+	size_t index = 0;
+	int num = 0;
+	
+	while (string[index] && isspace((int)string[index])) index++; //skipping spaces
+	
+	while (string[index] && isdigit((int)string[index])) //reading the digits
+	{
+		num = num * 10 + (int)string[index] - '0';
+		index++;
+	}
+	
+	if (end_index) *end_index = index;
+	return num;
+}
+
 size_t load_num_8(FILE *f, uint_least8_t* num, int *in_char) //8 bit version
 {	/*expects first (given) character to be already number (digit)
 	only works with unsigned numbers, returns numbers of digits that it read*/
@@ -186,6 +207,7 @@ int load_date_string(date_t *d, char *str_start)
 	char *str_end = NULL;
 	int num = 0;
 	
+	//TODO refactor with str_to_num
 	str_end = string_num_end(str_start, &str_start);
 	if (str_end == NULL || str_end == str_start) return 1;	//failed at loading 1
 	//printf("end char: '%c'\n", *str_end);

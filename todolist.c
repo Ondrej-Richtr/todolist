@@ -30,6 +30,36 @@ date_t get_current_date()
 	return output;
 }
 
+//comparators for todo_entry_t
+//expecting non-NULL pointers, used as func.pointers -> no point in making them inline
+/*	if entries are same comparator returns 0
+	if first entry is 'greater' it retruns negative number
+	if first entry is 'smaller' it returns positive number*/
+int todo_compar_status(const todo_entry_t *e1, const todo_entry_t *e2) //TODO some math magic
+{
+	//return e1->status > e2->status ? -1 : (e1->status < e2->status ? 1 : 0);
+	return e1->status ? (e2->status ? 0 : -1) : (e2->status ? 1 : 0);
+}
+int compar_dates(const date_t d1, const date_t d2) //date comparator
+{
+	if (d1.year != d2.year) return d1.year > d2.year ? -1 : 1;
+	if (d1.month != d2.month) return d1.month > d2.month ? -1 : 1;
+	if (d1.day != d2.day) return d1.day > d2.day ? -1 : 1;
+	return 0;
+}
+int todo_compar_deadline(const todo_entry_t *e1, const todo_entry_t *e2)
+{
+	return compar_dates(e1->deadline, e2->deadline);
+}
+int todo_compar_created(const todo_entry_t *e1, const todo_entry_t *e2)
+{
+	return compar_dates(e1->created_date, e2->created_date);
+}
+int todo_compar_text(const todo_entry_t *e1, const todo_entry_t *e2)
+{
+	return strcmp((char*)e1->text_buffer, (char*)e2->text_buffer);
+}
+
 //cli funcionality
 int generate_entry_splitted(todo_entry_t *entry, const char status, const date_t orig_date, char *dead_date)
 {	/*fills entry attributes specified by other parameters, EXCLUDING the text!
@@ -99,27 +129,27 @@ int generate_entry_from_string(const char* string, todo_entry_t *entry)
 
 int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size_t, size_t))
 {	//func should be the mapped function on the list
-	//it should return negative number when error and non-negative
-	//number of deleted entries
+	//func should return negative number when error and non-negative number of deleted entries
+	//this function returns non-zero when err
 	if (!list || !string || !func)
 	{
 		fprintf(stderr, "Err: Program passed NULL pointer into asc_index_map function! Ignoring current command...\n");
 		return -1;
 	}
 	
-	size_t i = 0, num = 0, deleted = 0, last = 0;
-	int func_ret = 0, atoi_ret = 0;
+	size_t i = 0, num = 0, deleted = 0, last = 0, load_end = 0;
+	int func_ret = 0, num_ret = 0;
 	
 	while (string[i] != '\0')
 	{
-		atoi_ret = atoi(string + i);
-		if (atoi_ret < 0)
+		num_ret = str_to_num(string + i, &load_end);
+		if (num_ret < 0)
 		{
-			fprintf(stderr, "Err: Wrong index '%d' specified, it can't be negative!\n", atoi_ret);
+			fprintf(stderr, "Err: Wrong index '%d' specified, it can't be negative!\n", num_ret);
 		}
 		else //ugly indentation, but whatever
 		{
-			num = (size_t)atoi_ret; //this should always cast correctly
+			num = (size_t)num_ret; //this should always cast correctly
 			//printf("num to delete: %u\n", num);
 			
 			if (!num || num <= last || num < deleted + 1) //when index is zero or not in ascending order
@@ -135,6 +165,7 @@ int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size
 			}
 		}
 		//repetitive skipping to the next number to load
+		i += load_end;
 		while (string[i] != '\0' && !(isseparator(string[i]) || isspace(string[i]))) i++;
 		while (isseparator(string[i]) || isspace(string[i])) i++;
 	}
@@ -198,7 +229,7 @@ int cmd_print(llist *list, char *data_buffer)
 	int style = PRINT_DEFAULT;
 	//skips to the end of data_buffer or start of a number
 	while (*data_buffer && !isdigit((int)*data_buffer)) data_buffer++;
-	if (*data_buffer) style = atoi(data_buffer); //only if there is a number
+	if (*data_buffer) style = str_to_num(data_buffer, NULL); //only if there is a number
 	
 	if (style < 0 || style > 5)
 	{
@@ -376,14 +407,14 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose)
 	}
 	
 	//gets the number to change (only loads one)
-	int atoi_ret = atoi(data_buffer);
-	if (atoi_ret < 0)
+	int num_ret = str_to_num(data_buffer, NULL);
+	if (num_ret < 0)
 	{
-		fprintf(stderr, "Err: Wrong index '%d' specified, it can't be negative!\n", atoi_ret);
+		fprintf(stderr, "Err: Wrong index '%d' specified, it can't be negative!\n", num_ret);
 		return 1;
 	}
 	
-	size_t num = (size_t)atoi_ret;
+	size_t num = (size_t)num_ret;
 	if (!num)
 	{
 		fprintf(stderr, "Err: Wrong index '%u' specified, indices can't be zero or letter!\n", num);
@@ -438,7 +469,7 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose)
 }
 
 int cmd_move(llist *list, char *data_buffer)
-{	//TODO moving up and down (maybe)
+{
 	if (!list || !data_buffer)
 	{
 		//TODO probably bad as the interactive while loops continues
@@ -449,10 +480,10 @@ int cmd_move(llist *list, char *data_buffer)
 	size_t from = 0, to = 0;
 	if (parse_range(data_buffer, &from, &to, &data_buffer))
 	{
-		from = atoi(data_buffer);
+		size_t num_offset = 0;
+		from = str_to_num(data_buffer, &num_offset);
 		to = from;
-		
-		data_buffer = string_num_end(data_buffer, NULL);
+		data_buffer = data_buffer + num_offset; //this sets data_buffer pointer after loaded from/to
 	}
 	
 	if (!from || !to)
@@ -464,11 +495,13 @@ int cmd_move(llist *list, char *data_buffer)
 	//skipping whitespaces until next number or up/down
 	while (*data_buffer && isspace((int)*data_buffer)) data_buffer++;
 	
-	size_t dir_offset = 0;
+	size_t dir_offset = 0, num_offset = 0;
 	int dir = parse_direction(data_buffer, &dir_offset);
-	data_buffer += dir_offset; //if there is dir parsed it will offset data_buffer to point after it
+	data_buffer += dir_offset; //if there is dir parsed it will offset data_buffer to point after
 	
-	size_t where = atoi(data_buffer);
+	//TODO check if returned value is negative
+	size_t where = (size_t)str_to_num(data_buffer, &num_offset);
+	data_buffer += num_offset; //if there is where index it will offset data_buffer to point after
 
 	//moving relatively up
 	if (dir == 1)
@@ -489,7 +522,6 @@ int cmd_move(llist *list, char *data_buffer)
 		fprintf(stderr, "Err: Wrong destination index to be moved to specified in the move command!\n");
 		return 2;
 	}
-	data_buffer = string_num_end(data_buffer, NULL);
 	
 	while (*data_buffer && isspace((int)*data_buffer)) data_buffer++;
 	if (*data_buffer) //this means that there is still some nonempty text after where number
@@ -643,8 +675,19 @@ int cmd_swap(llist *list, char *data_buffer)
 		return -1;
 	}
 	
-	char *scnd_number = string_num_end(data_buffer, &data_buffer);
-	size_t idx1 = atoi(data_buffer), idx2 = atoi(scnd_number);
+	size_t num_offset = 0;
+	int num_ret1 = str_to_num(data_buffer, &num_offset);
+	data_buffer += num_offset; //offsetting data_buffer so it points after first num
+	int num_ret2 = str_to_num(data_buffer, NULL);
+	
+	if (num_ret1 < 0 || num_ret2 < 0)
+	{
+		fprintf(stderr, "Err: Indices can't be negative numbers!\n");
+		return 3;
+	}
+	
+	//casting should be okay here
+	size_t idx1 = (size_t)num_ret1, idx2 = (size_t)num_ret2;
 
 	if (!idx1 || !idx2)
 	{
@@ -715,6 +758,7 @@ int parse_range(char *string, size_t *start, size_t *end, char **range_end)
 	//there must be a digit after whitespaces
 	if (!string[index] || !isdigit((int)string[index])) return 1;
 	
+	//TODO string_num_end can be possibly replaced by usage of str_to_num
 	char *num1 = string + index,
 	 *dash = string_num_end(string + index, NULL),
 	 *num2 = NULL;
@@ -724,9 +768,8 @@ int parse_range(char *string, size_t *start, size_t *end, char **range_end)
 	if (!*num2) return 3; //the second number must be specified
 	if (num2 - dash != 1) return 3; //epic pointer arithmetic hacking
 	
-	//TODO replace atoi with custom implementation
-	if (start) *start = atoi(num1);
-	if (end) *end = atoi(num2);
+	if (start) *start = str_to_num(num1, NULL);
+	if (end) *end = str_to_num(num2, NULL);
 	if (range_end) *range_end = num2_end;
 	
 	return 0;
@@ -840,7 +883,7 @@ int interactive_mode(FILE *input, const char *todo_file_path)
 	 }
 	
 	//write_err gets ignored as if the error occurred the err msg was printed by write_entries
-	//TODO better solution, because if error then the file gets emptied and all entries are lost
+	//if error occurs then the file gets emptied, but usually there's not much of room for error
 	int write_err = write_todofile(out_file, &list);
 	
 	fclose(out_file);
