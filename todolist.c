@@ -574,10 +574,9 @@ int cmd_move(llist *list, char *data_buffer)
 	return 0;
 }
 
-void print_help()
+void print_basichelp()
 {
 	//some basic help print
-	//TODO print detailed help for each specific command
 	puts("-------------HELP-------------");
 	puts("Interactive mode commands are:");
 	puts("\t'help' - prints this help on stdout");
@@ -590,7 +589,7 @@ void print_help()
 	puts("\t'move' - moves one or range of entries to specified index or relatively");
 	puts("\t'swap' - swaps two specified entries in current todolist");
 	puts("\t'sort' - sorts the todolist by done/undone/deadline/text/age");
-	puts("------------------------------");	
+	puts("------------------------------");
 }
 
 int cmd_help(char *data_buffer)
@@ -608,7 +607,7 @@ int cmd_help(char *data_buffer)
 	
 	if (!data_buffer[index])
 	{
-		print_help();
+		print_basichelp();
 		return 0;
 	}
 	
@@ -676,9 +675,10 @@ int cmd_help(char *data_buffer)
 		puts("Example - 'swap 1 2' or 'swap 18  9'");
 		break;
 	case sort_c:	//TODO better help for sort
-		puts("Command 'sort' sorts the current todo-list.");
-		puts("You need to specify one or more criteria it gets sorted by - supported ones are: done, undone, deadline, age, text.");
-		puts("Example - 'sort text' or 'sort deadline undone'");
+		puts("Command 'sort' sorts the current todo-list by given parameter(s).");
+		puts("Supported parameter to sort by: done, undone, deadline, age, text. You can specify more of them if you want series of sorting - it starts with first parameter and continues to the end one by one.");
+		puts("If error occurres in the sorting series it stops at that point, leaving the list only sorted by parameters before error.");
+		puts("Example - 'sort text' or 'sort deadline undone' (this is almost the same as 'sort deadline' followed by 'sort undone')");
 		break;
 	default:
 		printf("Help for command: '%s' is not implemented yet or something wrong happened!\n", cmd_start);
@@ -748,7 +748,6 @@ int cmd_sort(llist *list, char *data_buffer)
 	while (*data_buffer) //while there's some text in data_buffer
 	{
 		next_word = next_word_skip(data_buffer); //next_word should not be NULL
-		//printf("Word: '%s'\n", data_buffer);
 		
 		//sorting - we ignore return values as they are non-zero onůy for list == NULL (shouldn't happen here)
 		if (!strcmp("done", data_buffer)) llist_sort(list, todo_compar_statdone);
@@ -763,9 +762,6 @@ int cmd_sort(llist *list, char *data_buffer)
 		}
 		
 		data_buffer = next_word;
-		//skipping whitespaces
-		//TODO useless because of next_word_skip?
-		//while (*data_buffer && isspace((int)*data_buffer)) data_buffer++;
 	}
 	
 	return 0;
