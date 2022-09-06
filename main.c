@@ -62,14 +62,3 @@ int main(int argc, char **argv)
 
 	return EXIT_SUCCESS;
 }
-
-int main2(int argc, char **argv)
-{
-	//how to make this work?
-	fprintf(stdin, "ahoj");
-	int c = getchar();
-	
-	if (c != EOF) printf("I got: %c\n", (char)c);
-	
-	return 0;
-}

@@ -306,7 +306,6 @@ int llist_sort(llist *list, int(*comparator)(const todo_entry_t*, const todo_ent
 			//TODO checking for check being NULL
 			while (comparator(check->val, current->val) >= 0)
 			{
-				//printf("Compared to %s\n", (char*)&check->val->text_buffer);
 				check_prev = check;
 				check = check->next;
 			}
