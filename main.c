@@ -55,8 +55,8 @@ int main(int argc, char **argv)
 	int inter_err = interactive_mode(f, path);
 	if (inter_err)
 	{
-		//no need to print this in release version
-		//fprintf(stderr, "Interactive err: %d\n", inter_err);
+		//RELEASE no need to print this in release version
+		fprintf(stderr, "Interactive err: %d\n", inter_err);
 		return EXIT_FAILURE;
 	}
 
@@ -65,15 +65,11 @@ int main(int argc, char **argv)
 
 int main2(int argc, char **argv)
 {
-	if (argc < 2 || !argv[0] || !argv[1])
-	{
-		printf("Bad input\n");
-		return 1;
-	}
+	//how to make this work?
+	fprintf(stdin, "ahoj");
+	int c = getchar();
 	
-	size_t end = 0;
-	int num = str_to_num(argv[1], &end);
-	printf("Number: '%d' end: '%lu'\n", num, end);
+	if (c != EOF) printf("I got: %c\n", (char)c);
 	
 	return 0;
 }

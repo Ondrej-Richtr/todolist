@@ -7,7 +7,7 @@
 #include <string.h>
 #include <time.h>
 
-#define TEXT_MAX_LEN 64
+#define TEXT_MAX_LEN 255
 #define NUM_BUFFER_SIZE 64
 #define CLI_LINE_MAX_LEN 1024
 
@@ -31,9 +31,9 @@ inline void date_null(date_t *date)
 
 //int write_date(FILE *f, const date_t date);
 
-typedef struct
+typedef struct //TODO change status to uint8? or char?
 {
-	int status;							//signalizes if entry was completed, 0 -> not done, > 0 -> done
+	int status;							//signalizes if entry was completed, 0 -> not done, 1 -> done, anything else should not happen
 	date_t created_date;				//date of creation (currently date of last modification)
 	date_t deadline;					//deadline for this entry
 	char text_buffer[TEXT_MAX_LEN + 1];	//description of entry, +1 for NULL char
@@ -90,6 +90,8 @@ int llist_move(llist *list, size_t from, size_t to, size_t where);
 
 int llist_swap(llist *list, size_t idx1, size_t idx2);
 
+int llist_sort(llist *list, int(*comparator)(const todo_entry_t*, const todo_entry_t*));
+
 //todolist_load.c
 int isseparator(int c);
 
@@ -142,7 +144,7 @@ int write_todofile(FILE *f, llist *list);
 
 
 //todolist.c
-enum CmdType{ help_c, print_c, add_c, del_c, mark_c, clear_c, change_c, move_c, swap_c };
+enum CmdType{ help_c, print_c, add_c, del_c, mark_c, clear_c, change_c, move_c, swap_c, sort_c };
 enum SpecType{ all_c, done_c, undone_c};
 
 //time handling:
@@ -183,6 +185,8 @@ int cmd_move(llist *list, char *data_buffer);
 int cmd_help(char *data_buffer);
 
 int cmd_swap(llist *list, char *data_buffer);
+
+int cmd_sort(llist *list, char *data_buffer);
 
 int parse_range(char *string, size_t *start, size_t *end, char **range_end);
 

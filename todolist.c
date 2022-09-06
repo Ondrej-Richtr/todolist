@@ -35,13 +35,28 @@ date_t get_current_date()
 /*	if entries are same comparator returns 0
 	if first entry is 'greater' it retruns negative number
 	if first entry is 'smaller' it returns positive number*/
-int todo_compar_status(const todo_entry_t *e1, const todo_entry_t *e2) //TODO some math magic
+int todo_compar_statdone(const todo_entry_t *e1, const todo_entry_t *e2)
 {
+	//this assumess that status done is always same positive number and undone always zero
+	return e1->status - e2->status;
 	//return e1->status > e2->status ? -1 : (e1->status < e2->status ? 1 : 0);
-	return e1->status ? (e2->status ? 0 : -1) : (e2->status ? 1 : 0);
+	//return e1->status ? (e2->status ? 0 : 1) : (e2->status ? -1 : 0);
 }
+int todo_compar_statundone(const todo_entry_t *e1, const todo_entry_t *e2)
+{
+	//this assumess that status done is always same positive number and undone always zero
+	return e2->status - e1->status;
+	//return e1->status > e2->status ? -1 : (e1->status < e2->status ? 1 : 0);
+	//return e1->status ? (e2->status ? 0 : -1) : (e2->status ? 1 : 0);
+}
+
 int compar_dates(const date_t d1, const date_t d2) //date comparator
 {
+	//validity checks (invalid dates are treated as "bigger" than valid ones)
+	if (!is_date_valid(d1)) return is_date_valid(d2) ? -1 : 0;
+	if (!is_date_valid(d2)) return 1;
+	
+	//if both dates are valid
 	if (d1.year != d2.year) return d1.year > d2.year ? -1 : 1;
 	if (d1.month != d2.month) return d1.month > d2.month ? -1 : 1;
 	if (d1.day != d2.day) return d1.day > d2.day ? -1 : 1;
@@ -57,7 +72,8 @@ int todo_compar_created(const todo_entry_t *e1, const todo_entry_t *e2)
 }
 int todo_compar_text(const todo_entry_t *e1, const todo_entry_t *e2)
 {
-	return strcmp((char*)e1->text_buffer, (char*)e2->text_buffer);
+	//e2 and e1 must be switched to follow out comparison logic (maybe rework this later?)
+	return strcmp((char*)e2->text_buffer, (char*)e1->text_buffer);
 }
 
 //cli funcionality
@@ -307,7 +323,7 @@ int mark_entry(llist *list, size_t index, size_t orig_index, int is_done)
 		return -1;
 	}
 	
-	entry->status = is_done;
+	entry->status = is_done ? 1 : 0; //the ternary operator to be sure that status attribute is always 1 or 0
 	return 0;
 }
 
@@ -431,7 +447,7 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose)
 	if (is_verbose)
 	{
 		fprintf(stdout, "You are about to change the #%u entry: '", num);
-		print_todoentry(stdout, *old_entry, 1);
+		print_todoentry(stdout, *old_entry, 3); //this should print in some meaningful style
 		fputs("'\nWrite changed version at the next line or you can abort by writing an empty line\n", stdout);
 	}
 	
@@ -573,6 +589,7 @@ void print_help()
 	puts("\t'change' - changes one existing entry that you specify");
 	puts("\t'move' - moves one or range of entries to specified index or relatively");
 	puts("\t'swap' - swaps two specified entries in current todolist");
+	puts("\t'sort' - sorts the todolist by done/undone/deadline/text/age");
 	puts("------------------------------");	
 }
 
@@ -658,6 +675,11 @@ int cmd_help(char *data_buffer)
 		puts("You need to specify two valid indices refering to those entries that will be swapped.");
 		puts("Example - 'swap 1 2' or 'swap 18  9'");
 		break;
+	case sort_c:	//TODO better help for sort
+		puts("Command 'sort' sorts the current todo-list.");
+		puts("You need to specify one or more criteria it gets sorted by - supported ones are: done, undone, deadline, age, text.");
+		puts("Example - 'sort text' or 'sort deadline undone'");
+		break;
 	default:
 		printf("Help for command: '%s' is not implemented yet or something wrong happened!\n", cmd_start);
 		break;
@@ -705,6 +727,50 @@ int cmd_swap(llist *list, char *data_buffer)
 	return 0;
 }
 
+int cmd_sort(llist *list, char *data_buffer)
+{
+	if (!list || !data_buffer)
+	{
+		//TODO probably bad as the interactive while loops continues
+		fprintf(stderr, "Err: Program passed NULL pointer into sort command! Ignoring this command...\n");
+		return -1;
+	}
+	
+	//skipping initial whitespaces
+	while (*data_buffer && isspace((int)*data_buffer)) data_buffer++;
+	if (!*data_buffer) //no sorting happened
+	{
+		fprintf(stderr, "Err: You need to specify which parameter to sort by!\n");
+		return 1;
+	}
+
+	char *next_word = NULL;
+	while (*data_buffer) //while there's some text in data_buffer
+	{
+		next_word = next_word_skip(data_buffer); //next_word should not be NULL
+		//printf("Word: '%s'\n", data_buffer);
+		
+		//sorting - we ignore return values as they are non-zero onůy for list == NULL (shouldn't happen here)
+		if (!strcmp("done", data_buffer)) llist_sort(list, todo_compar_statdone);
+		else if (!strcmp("undone", data_buffer)) llist_sort(list, todo_compar_statundone);
+		else if (!strcmp("deadline", data_buffer)) llist_sort(list, todo_compar_deadline);
+		else if (!strcmp("age", data_buffer)) llist_sort(list, todo_compar_created); //"age" might be bad term for this?
+		else if (!strcmp("text", data_buffer)) llist_sort(list, todo_compar_text);
+		else
+		{	
+			fprintf(stderr, "Err: Wrong parameter '%s' in sort command! Type 'help sort' for details.\n", data_buffer);
+			return 2;
+		}
+		
+		data_buffer = next_word;
+		//skipping whitespaces
+		//TODO useless because of next_word_skip?
+		//while (*data_buffer && isspace((int)*data_buffer)) data_buffer++;
+	}
+	
+	return 0;
+}
+
 int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 {	/*calls correct functionality specified by command type argument
 	passes in buffer if the function requires it
@@ -721,6 +787,7 @@ int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 		case change_c: return cmd_change(list, buffer, 1); //1 is for verbose mode (default in interactive)
 		case move_c: return cmd_move(list, buffer);
 		case swap_c: return cmd_swap(list, buffer);
+		case sort_c: return cmd_sort(list, buffer);
 		default: //this shouldn't normally happen
 		fprintf(stderr, "Err: Wrong command type specified '%d' in command caller!\n", type);
 		return 1;
@@ -810,6 +877,7 @@ int parse_cmd_type(char *cmd, enum CmdType *type_ptr)
 	else if (!strcmp("change", cmd)) *type_ptr = change_c;
 	else if (!strcmp("move", cmd)) *type_ptr = move_c;
 	else if (!strcmp("swap", cmd)) *type_ptr = swap_c;
+	else if (!strcmp("sort", cmd)) *type_ptr = sort_c;
 	else return 0;
 	return 1;
 }

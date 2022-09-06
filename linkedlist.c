@@ -283,16 +283,17 @@ int llist_swap(llist *list, size_t idx1, size_t idx2)
 	return 0;
 }
 
-int llist_sort(llist *list, int(*comparator)(todo_entry_t*, todo_entry_t*)) //TODO
+int llist_sort(llist *list, int(*comparator)(const todo_entry_t*, const todo_entry_t*)) //TODO - test this
 {
 	if (!list) return -1;
 	if (!list->first) return 0;
 	
 	struct node *sorted = list->first;
-	while (sorted->next)
+	while (sorted && sorted->next)
 	{
 		struct node *current = sorted->next;
-		if (comparator(sorted->val, current->val) >= 0)
+		
+		if (comparator(sorted->val, current->val) < 0)
 		{
 			//disconnecting currently sorted node from the list
 			sorted->next = current->next;
@@ -305,19 +306,20 @@ int llist_sort(llist *list, int(*comparator)(todo_entry_t*, todo_entry_t*)) //TO
 			//TODO checking for check being NULL
 			while (comparator(check->val, current->val) >= 0)
 			{
+				//printf("Compared to %s\n", (char*)&check->val->text_buffer);
 				check_prev = check;
 				check = check->next;
 			}
 			
-			if (!check_prev) llist_add_node_first(list, current);
-			else
+			//connecting the disconnected node back
+			if (!check_prev) llist_add_node_first(list, current); //it's the first node
+			else 
 			{
 				current->next = check;
 				check_prev->next = current;
 			}
 		}
-		
-		sorted = sorted->next;
+		else sorted = sorted->next;
 	}
 	
 	return 0;

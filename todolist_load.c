@@ -293,6 +293,10 @@ int load_one_entry(FILE *f, todo_entry_t *entry)
 	//this should be always possible as the length of buffer is TEXT_MAX_SIZE + 1
 	entry->text_buffer[size] = '\0';
 	
+	/*printf("Test buffer: '%s'\n", (char*)entry->text_buffer);
+	for (size_t i = 0; i < size; i++) printf("%d ", (int)entry->text_buffer[i]);
+	putchar('\n');*/
+	
 	if (c != '\n') skip_until(f, &c, '\n'); //skips to end of line or EOF
 	
 	return 0;
@@ -313,8 +317,11 @@ int load_entries(llist *list, const char *path)
 	
 	while (!status)
 	{
-		entry = malloc(sizeof(todo_entry_t));
-		memset((void*)entry, 0, sizeof(todo_entry_t)); //nulling the entry should do the job
+		//entry = malloc(sizeof(todo_entry_t));
+		//memset((void*)entry, 0, sizeof(todo_entry_t)); //nulling the entry
+		
+		entry = calloc(1, sizeof(todo_entry_t)); //using calloc so the entry is nulled already
+		
 		if (entry == NULL)
 		{	//entry couldn't get allocated
 			fprintf(stderr, "Err: Couldn't allocate memory of %u bytes!\n", sizeof(todo_entry_t));
@@ -337,10 +344,9 @@ int load_entries(llist *list, const char *path)
 		else if (!llist_add_end(list, entry))	//Success -> entry gets added to list
 		{	//adding to list failed
 			//same error message as in add_entry_splitted:
-			fprintf(stderr, "Err: Failed to add following entry into the list!\n");
-			fprintf(stderr, "The entry: ");
+			fprintf(stderr, "Err: Failed to add following entry into the list!\nThe entry: '");
 			print_todoentry(stderr, *entry, 0);
-			fputc('\n', stderr);
+			fputs("'\n", stderr);
 			llist_destroy_contents(list);
 			free(entry);
 			fclose(f);
