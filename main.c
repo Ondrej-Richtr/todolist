@@ -62,3 +62,21 @@ int main(int argc, char **argv)
 
 	return EXIT_SUCCESS;
 }
+
+int main2()
+{
+	char *string = "   3 2-1    ";
+	size_t start = 0, end = 0;
+	
+	int ret = parse_range(string, &start, &end, NULL);
+	if (ret)
+	{
+		printf("err number: %d\n", ret);
+	}
+	else
+	{
+		printf("Range: %u - %u\n", start, end);
+	}
+	
+	return 0;
+}

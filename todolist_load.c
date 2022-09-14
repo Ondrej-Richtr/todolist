@@ -94,14 +94,21 @@ void skip_comment_blank_lines(FILE *f, int *in_char)
 
 int str_to_num(const char *string, size_t *end_index)
 {	//skips initial whitespaces and then tries to read as much digits as possible
-	//returns numerical value of read digits, does not support negative numbers yet
-	//if no digits were read it returns zero
-	if (!string) return 0;
+	//supports and returns only non-negative numbers for now
+	//returns negative number when no digits encountered
+	if (!string) return -1;
 	
 	size_t index = 0;
-	int num = 0;
-	
 	while (string[index] && isspace((int)string[index])) index++; //skipping spaces
+	
+	//means we have nothing to read (encountered end of string or some other nonspace text)
+	if (!isdigit((int)string[index]))
+	{
+		if (end_index) *end_index = index;
+		return -2;
+	}
+	
+	int num = 0;
 	
 	while (string[index] && isdigit((int)string[index])) //reading the digits
 	{
@@ -173,7 +180,7 @@ int load_num_tolerant_16(FILE *f, uint_least16_t* num, int *in_char) //16 bit ve
 	return load_num_16(f, num, in_char);
 }
 
-char* string_num_end(char *num_start, char **new_start)
+char* string_num_end(char *num_start, char **new_start) //TODO is this useless now?
 {	//find first number in given string 'num_start' and returns where this number ends
 	//if new_start is not NULL then stores start of this number there
 	if (!num_start) return NULL;
@@ -200,30 +207,29 @@ int load_date(FILE *f, date_t *d, int c)
 	return 0;
 }
 
-int load_date_string(date_t *d, char *str_start)
+int load_date_string(date_t *d, char *str)
 {	//loads date from given string, returns non-null if not all numbers were loaded
-	if (!d || !str_start) return -1;
+	//IDEA maybe add checks whether we load exactly 3 numbers (zeroes included)
+	if (!d || !str) return -1;
 	
-	char *str_end = NULL;
-	int num = 0;
+	size_t index = 0;
 	
-	//TODO refactor with str_to_num
-	str_end = string_num_end(str_start, &str_start);
-	if (str_end == NULL || str_end == str_start) return 1;	//failed at loading 1
-	//printf("end char: '%c'\n", *str_end);
-	d->day = (uint8_t)atoi(str_start);
-	str_start = str_end;
+	int day_ret = str_to_num(str, &index);
+	str += index;
+	//we dont need to set index to zero after, as str_to_num sets it always for non NULL string
+	if (*str == '.') str++; //skipping the dot
 	
-	str_end = string_num_end(str_start, &str_start);
-	if (str_end == NULL || str_end == str_start) return 2;	//failed at loading 2
-	//printf("end char: '%c'\n", *str_end);
-	d->month = (uint8_t)atoi(str_start);
-	str_start = str_end;
+	int month_ret = str_to_num(str, &index);
+	str += index;
+	if (*str == '.') str++; //skipping the dot
 	
-	str_end = string_num_end(str_start, &str_start);
-	if (str_end == NULL || str_end == str_start) return 3;	//failed at loading 3
-	//printf("end char: '%c'\n", *str_end);
-	d->year = (uint16_t)atoi(str_start);	
+	int year_ret = str_to_num(str, NULL);
+	
+	if (day_ret < 0 || month_ret < 0 || year_ret < 0) return 1; //err is not needed
+	
+	d->day = (uint_least8_t)day_ret;
+	d->month = (uint_least8_t)month_ret;
+	d->year = (uint_least16_t)year_ret;
 	
 	return 0;
 }

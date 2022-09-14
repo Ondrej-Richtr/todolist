@@ -161,7 +161,7 @@ int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size
 		num_ret = str_to_num(string + i, &load_end);
 		if (num_ret < 0)
 		{
-			fprintf(stderr, "Err: Wrong index '%d' specified, it can't be negative!\n", num_ret);
+			fprintf(stderr, "Err: Wrong index format, it can't be a negaitve number or text!\n");
 		}
 		else //ugly indentation, but whatever
 		{
@@ -171,7 +171,7 @@ int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size
 			if (!num || num <= last || num < deleted + 1) //when index is zero or not in ascending order
 			{
 				if (num && num <= last) fprintf(stderr, "Err: Wrong index '%u', indices must be written in ascending order!\n", num);
-				else fprintf(stderr, "Err: Wrong index '%u' specified, it can't be zero or letter!\n", num);
+				else fprintf(stderr, "Err: Wrong index '%u' specified, it can't be zero!\n", num);
 			}
 			//func shoould print it's own error msg when something goes wrong!
 			else if ((func_ret = func(list, num - 1 - deleted, num)) >= 0) //so we can track how many was successfuly deleted
@@ -247,10 +247,16 @@ int cmd_print(llist *list, char *data_buffer)
 	while (*data_buffer && !isdigit((int)*data_buffer)) data_buffer++;
 	if (*data_buffer) style = str_to_num(data_buffer, NULL); //only if there is a number
 	
-	if (style < 0 || style > 5)
+	if (style < 0)
+	{
+		fprintf(stderr, "Err: Unvalid style number in print command! Probably wrong number format.\n");
+		return 1;
+	}
+	
+	if (style > 5)
 	{
 		fprintf(stderr, "Err: Undefined style '%d' in print command!\n", style);
-		return 1;
+		return 2;
 	}
 	
 	print_todolist(list, style);
@@ -426,14 +432,14 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose)
 	int num_ret = str_to_num(data_buffer, NULL);
 	if (num_ret < 0)
 	{
-		fprintf(stderr, "Err: Wrong index '%d' specified, it can't be negative!\n", num_ret);
+		fprintf(stderr, "Err: Wrong index format in change command!\n");
 		return 1;
 	}
 	
 	size_t num = (size_t)num_ret;
 	if (!num)
 	{
-		fprintf(stderr, "Err: Wrong index '%u' specified, indices can't be zero or letter!\n", num);
+		fprintf(stderr, "Err: Wrong index '%u' specified, index can't be zero!\n", num);
 		return 2;
 	}
 
@@ -497,7 +503,11 @@ int cmd_move(llist *list, char *data_buffer)
 	if (parse_range(data_buffer, &from, &to, &data_buffer))
 	{
 		size_t num_offset = 0;
-		from = str_to_num(data_buffer, &num_offset);
+		int num_ret = str_to_num(data_buffer, &num_offset);
+		
+		if (num_ret < 0) from = 0; //this means we failed to read a number -> err is triggered at if (!from || !to) block
+		else from = (size_t)num_ret;
+		
 		to = from;
 		data_buffer = data_buffer + num_offset; //this sets data_buffer pointer after loaded from/to
 	}
@@ -515,8 +525,13 @@ int cmd_move(llist *list, char *data_buffer)
 	int dir = parse_direction(data_buffer, &dir_offset);
 	data_buffer += dir_offset; //if there is dir parsed it will offset data_buffer to point after
 	
-	//TODO check if returned value is negative
-	size_t where = (size_t)str_to_num(data_buffer, &num_offset);
+	int num_ret2 = str_to_num(data_buffer, &num_offset);
+	if (num_ret2 < 0)
+	{
+		fprintf(stderr, "Err: You need to specify where/how much to move in move command!\n");
+		return 6;
+	}
+	size_t where = (size_t)num_ret2;
 	data_buffer += num_offset; //if there is where index it will offset data_buffer to point after
 
 	//moving relatively up
@@ -704,7 +719,7 @@ int cmd_swap(llist *list, char *data_buffer)
 	
 	if (num_ret1 < 0 || num_ret2 < 0)
 	{
-		fprintf(stderr, "Err: Indices can't be negative numbers!\n");
+		fprintf(stderr, "Err: Wrong index format in swap command!\n");
 		return 3;
 	}
 	
@@ -814,10 +829,23 @@ int parse_range(char *string, size_t *start, size_t *end, char **range_end)
 {	/*parses input from string in format "startnum-endnum"
 	ignores whitespaces at the start and other text after
 	returns non-zero if bounds not found*/
-	size_t index = 0;
-	//skipping initial whitespaces
-	while (string[index] && isspace((int)string[index])) index++;
+	while (*string && isspace((int)*string)) string++; //skipping initial whitespaces
 	
+	size_t offset = 0;
+	int start_ret = str_to_num(string, &offset);
+	if (start_ret < 0) return 1;
+	
+	char *dash = string + offset;
+	if (!*dash || *dash != '-' || !isdigit((int)dash[1])) return 2; //dash shouldnt be NULL
+	
+	int end_ret = str_to_num(dash + 1, &offset);
+	if (end_ret < 0) return 3;
+	
+	if (start) *start = (size_t)start_ret;
+	if (end) *end = (size_t)end_ret;
+	if (range_end) *range_end = dash + 1 + offset;
+	
+	/*
 	//there must be a digit after whitespaces
 	if (!string[index] || !isdigit((int)string[index])) return 1;
 	
@@ -829,11 +857,7 @@ int parse_range(char *string, size_t *start, size_t *end, char **range_end)
 	if (*dash != '-') return 2; //dash shouldnt be NULL
 	char *num2_end = string_num_end(dash, &num2);
 	if (!*num2) return 3; //the second number must be specified
-	if (num2 - dash != 1) return 3; //epic pointer arithmetic hacking
-	
-	if (start) *start = str_to_num(num1, NULL);
-	if (end) *end = str_to_num(num2, NULL);
-	if (range_end) *range_end = num2_end;
+	if (num2 - dash != 1) return 3; //epic pointer arithmetic hacking*/
 	
 	return 0;
 }
