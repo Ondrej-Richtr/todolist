@@ -149,7 +149,7 @@ int llist_delete_nth_entry(llist *list, size_t n)
 	return 0;
 }
 
-void llist_clear(llist *list, int status)
+void llist_clear(llist *list, uint_least8_t status)
 {	//deletes all entries from linked list with given status
 	struct node *n = list->first, *next = NULL, *prev = NULL;
 	
@@ -180,11 +180,7 @@ int llist_disconnect(llist *list, llist *into, size_t start, size_t end)
 	
 	if (length == end + 1) end_node = list->last;
 	else end_node = llist_nth_node(list, end);
-	if (!end_node)
-	{
-		//TODO err?
-		return 3;
-	}
+	if (!end_node) return 3; //unexpected if it happens (probably bug in somehting)
 	
 	//touching the lists
 	if (start_node_prev == NULL)
@@ -226,11 +222,26 @@ int llist_move(llist *list, size_t from, size_t to, size_t where)
 		if (!where_node_prev) return 2;
 	}
 	
-	size_t moved_start = from, moved_end = to;
+	//size_t moved_start = from, moved_end = to;
 	llist moved = { NULL, NULL };
 	
-	int diserr = llist_disconnect(list, &moved, moved_start, moved_end);
-	if (diserr) return 3;
+	int diserr = llist_disconnect(list, &moved, from, to);
+	switch (diserr)
+	{
+	case 0: break;
+	case 1:
+		//same as in move_cmd, in current state this err shouldnt happen
+		fprintf(stderr, "Err: Start '%u' of a range can't be bigger than the end '%u'!\n", from + 1, to + 1);
+		return 3;
+	case 2:
+		fprintf(stderr, "Err: End '%u' of a range is out of todo-list bounds!\n", to + 1);
+		return 3;
+	case 3:	//unexpected error to happen (maybe bug in llist_nth_node or llist_disconnect?)
+		fprintf(stderr, "Err: Can't find entry at index '%u' in current todo-list!\n", to + 1);
+		return 3;
+	default: //now should work only for diserr == -1
+		return 3;
+	}
 
 	//moved now shouldnt contain NULL pointers, right?
 	//as we always select nonempty section of linkedlist
@@ -283,7 +294,7 @@ int llist_swap(llist *list, size_t idx1, size_t idx2)
 	return 0;
 }
 
-int llist_sort(llist *list, int(*comparator)(const todo_entry_t*, const todo_entry_t*)) //TODO - test this
+int llist_sort(llist *list, int(*comparator)(const todo_entry_t*, const todo_entry_t*))
 {
 	if (!list) return -1;
 	if (!list->first) return 0;

@@ -18,7 +18,7 @@ int write_one_entry(FILE *f, todo_entry_t *entry)
 {
 	if (!f || !entry) return 1;
 	
-	switch (entry->status)
+	switch (entry->status) //TODO maybe print an error when not 0 or 1?
 	{
 		case 0: fputc(' ', f);
 		break;

@@ -29,12 +29,10 @@ inline void date_null(date_t *date)
 	date->day = 0, date->month = 0, date->year = 0;
 }
 
-//int write_date(FILE *f, const date_t date);
-
-typedef struct //TODO change status to uint8? or char?
+typedef struct
 {
-	int status;							//signalizes if entry was completed, 0 -> not done, 1 -> done, anything else should not happen
-	date_t created_date;				//date of creation (currently date of last modification)
+	uint_least8_t status;				//signalizes if entry was completed, 0 -> not done, 1 -> done, anything else should not happen
+	date_t 	created_date;				//date of creation (currently date of last modification)
 	date_t deadline;					//deadline for this entry
 	char text_buffer[TEXT_MAX_LEN + 1];	//description of entry, +1 for NULL char
 } todo_entry_t;
@@ -82,7 +80,7 @@ todo_entry_t *llist_nth_entry(llist *list, size_t n);
 
 int llist_delete_nth_entry(llist *list, size_t n);
 
-void llist_clear(llist *list, int status);
+void llist_clear(llist *list, uint_least8_t status);
 
 int llist_disconnect(llist *list, llist *into, size_t start, size_t end);
 

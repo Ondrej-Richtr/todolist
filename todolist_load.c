@@ -271,7 +271,7 @@ void strcpy_buffer(size_t buffer_size, char *buffer, const char *source)
 
 int load_one_entry(FILE *f, todo_entry_t *entry)
 {	/*loads entry from given file, ignores commented lines (starting with '#')
-	returns 0 if success, -1 if it reached the EOF, otherwise it positive number*/
+	returns 0 if success, -1 if it reached the EOF, otherwise positive number*/
 	if (!f || !entry) return 1;
 	
 	int c = fgetc(f);
@@ -323,9 +323,6 @@ int load_entries(llist *list, const char *path)
 	
 	while (!status)
 	{
-		//entry = malloc(sizeof(todo_entry_t));
-		//memset((void*)entry, 0, sizeof(todo_entry_t)); //nulling the entry
-		
 		entry = calloc(1, sizeof(todo_entry_t)); //using calloc so the entry is nulled already
 		
 		if (entry == NULL)
@@ -338,8 +335,25 @@ int load_entries(llist *list, const char *path)
 		
 		if ((status = load_one_entry(f, entry)) > 0)
 		{	//positive return value means something went wrong
-			//TODO there could be more detailed error messages
-			fprintf(stderr, "Err: Loading of one specific todo entry failed! Probably wrong format.\n");
+			//IDEA maybe print on which index was the corrupted entry
+			fprintf(stderr, "Err: Loading of a entry failed!");
+			switch (status)
+			{
+			case 2:
+				fprintf(stderr, " -> Status wasn't in correct format.\n");
+				break;
+			case 3:
+				fprintf(stderr, " -> Failure of loading deadline date.\n");
+				break;
+			case 4:
+				fprintf(stderr, " -> Failure of loading created date.\n");
+				break;
+			//those shouldnt normally happen
+			case 1:
+			default:
+				fprintf(stderr, " -> Unexpected error.\n");
+				break;
+			}
 			llist_destroy_contents(list);
 			free(entry);
 			fclose(f);

@@ -38,14 +38,14 @@ date_t get_current_date()
 int todo_compar_statdone(const todo_entry_t *e1, const todo_entry_t *e2)
 {
 	//this assumess that status done is always same positive number and undone always zero
-	return e1->status - e2->status;
+	return (int)e1->status - (int)e2->status;
 	//return e1->status > e2->status ? -1 : (e1->status < e2->status ? 1 : 0);
 	//return e1->status ? (e2->status ? 0 : 1) : (e2->status ? -1 : 0);
 }
 int todo_compar_statundone(const todo_entry_t *e1, const todo_entry_t *e2)
 {
 	//this assumess that status done is always same positive number and undone always zero
-	return e2->status - e1->status;
+	return (int)e2->status - (int)e1->status;
 	//return e1->status > e2->status ? -1 : (e1->status < e2->status ? 1 : 0);
 	//return e1->status ? (e2->status ? 0 : -1) : (e2->status ? 1 : 0);
 }
@@ -94,7 +94,7 @@ int generate_entry_splitted(todo_entry_t *entry, const char status, const date_t
 		return 1;
 	}
 	
-	//no error should happen over there: (so we set thing only now)
+	//no error should happen over there: (so we set status now)
 	entry->status = 0;
 	if (status == 'X') entry->status = 1;
 	
@@ -329,7 +329,7 @@ int mark_entry(llist *list, size_t index, size_t orig_index, int is_done)
 		return -1;
 	}
 	
-	entry->status = is_done ? 1 : 0; //the ternary operator to be sure that status attribute is always 1 or 0
+	entry->status = is_done ? 1 : 0; //ternary operator to be sure that status attribute is always 1 or 0
 	return 0;
 }
 
@@ -461,8 +461,7 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose)
 	size_t line_len = readline(stdin, CLI_LINE_MAX_LEN, line_buffer);
 	if (!line_len)
 	{
-		//TODO abort message if is_verbose?
-		//puts("Aborted success");
+		if (is_verbose) puts("Entry was left unchanged.");
 		return 0;
 	}
 	
@@ -576,8 +575,8 @@ int cmd_move(llist *list, char *data_buffer)
 				if (!dir) fprintf(stderr, "Err: The index '%u' is out of bounds!\n", where);
 				else fprintf(stderr, "Err: Move command tries to move out of bounds!\n");
 				break;
-			case 3: //TODO make this be printed instead in llist_move
-				fprintf(stderr, "Err: Move command couldn't move specified range '%u-%u'!\n", from, to);
+			case 3: //no need to print this err, it should be printed in more detail in llist_move
+				//fprintf(stderr, "Err: Move command couldn't move specified range '%u-%u'!\n", from, to);
 				break;
 			default:
 				fprintf(stderr, "Err: Unexpected error in the move command!\n");
@@ -638,7 +637,7 @@ int cmd_help(char *data_buffer)
 		return 1;
 	}
 	
-	switch(cmd) //TODO help print for each command
+	switch(cmd)
 	{
 	case help_c:
 		puts("Command 'help' prints list of all implemented commands and their short description.");
@@ -689,7 +688,7 @@ int cmd_help(char *data_buffer)
 		puts("You need to specify two valid indices refering to those entries that will be swapped.");
 		puts("Example - 'swap 1 2' or 'swap 18  9'");
 		break;
-	case sort_c:	//TODO better help for sort
+	case sort_c:
 		puts("Command 'sort' sorts the current todo-list by given parameter(s).");
 		puts("Supported parameter to sort by: done, undone, deadline, age, text. You can specify more of them if you want series of sorting - it starts with first parameter and continues to the end one by one.");
 		puts("If error occurres in the sorting series it stops at that point, leaving the list only sorted by parameters before error.");
@@ -844,20 +843,6 @@ int parse_range(char *string, size_t *start, size_t *end, char **range_end)
 	if (start) *start = (size_t)start_ret;
 	if (end) *end = (size_t)end_ret;
 	if (range_end) *range_end = dash + 1 + offset;
-	
-	/*
-	//there must be a digit after whitespaces
-	if (!string[index] || !isdigit((int)string[index])) return 1;
-	
-	//TODO string_num_end can be possibly replaced by usage of str_to_num
-	char *num1 = string + index,
-	 *dash = string_num_end(string + index, NULL),
-	 *num2 = NULL;
-	
-	if (*dash != '-') return 2; //dash shouldnt be NULL
-	char *num2_end = string_num_end(dash, &num2);
-	if (!*num2) return 3; //the second number must be specified
-	if (num2 - dash != 1) return 3; //epic pointer arithmetic hacking*/
 	
 	return 0;
 }
