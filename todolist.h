@@ -151,7 +151,7 @@ date_t get_current_date();
 //parsing enums and specifiers:
 int parse_direction(const char *string, size_t *end_index);
 
-int parse_cmd_type(char *cmd, enum CmdType *type_ptr);
+int parse_cmd_type(const char *cmd, enum CmdType *type_ptr);
 
 int parse_specifier_type(char *string, enum SpecType *spec_ptr);
 
@@ -189,3 +189,5 @@ int cmd_sort(llist *list, char *data_buffer);
 int parse_range(char *string, size_t *start, size_t *end, char **range_end);
 
 int interactive_mode(FILE *input, const char *todo_file_path);
+
+int noninteractive_mode(const size_t options_num, const char **options, const char *todo_file_path);

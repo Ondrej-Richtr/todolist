@@ -868,13 +868,13 @@ int parse_specifier_type(char *string, enum SpecType *spec_ptr)
 	return 1;
 }
 
-int parse_cmd_type(char *cmd, enum CmdType *type_ptr)
-{	//returns zero if not supported type, otherwise returns 1
-	//and fills type_ptr with correct type
+int parse_cmd_type(const char *cmd, enum CmdType *type_ptr)
+{	//returns zero if not suppworted type, otherwise returns 1
+	//and fills type_ptr with correct type, type_ptr and cmd mustnt be NULL!
 
 	//IDEA more effective way
 	if (!strcmp("help", cmd)) *type_ptr = help_c;
-	else if (!strcmp("print", cmd))	*type_ptr = print_c;
+	else if (!strcmp("print", cmd)) *type_ptr = print_c;
 	else if (!strcmp("add", cmd)) *type_ptr = add_c;
 	else if (!strcmp("delete", cmd)) *type_ptr = del_c;
 	else if (!strcmp("mark", cmd)) *type_ptr = mark_c;
@@ -887,10 +887,10 @@ int parse_cmd_type(char *cmd, enum CmdType *type_ptr)
 	return 1;
 }
 
-int parse_inter_cmd(FILE *input, llist *list, char buffer[CLI_LINE_MAX_LEN + 1])
+int inter_cmd(FILE *input, llist *list, char buffer[CLI_LINE_MAX_LEN + 1])
 {	/*parses which command to be done from buffer and if needed loads
 	more lines from the input, then executes correct cli function
-	returns 1 if wrong input or other non-zero if error*/
+	returns 1 if wrong command or other non-zero if error*/
 	size_t index = 0, cmd_end = 0;
 	
 	//skipping to the end of first word
@@ -939,21 +939,21 @@ int interactive_mode(FILE *input, const char *todo_file_path)
 	
 	char line_buffer[CLI_LINE_MAX_LEN + 1] = { 0 };
 	size_t line_len = 0;
-	int parse_err = 0;
+	int inter_err = 0;
 	
 	while ((line_len = readline(input, CLI_LINE_MAX_LEN, line_buffer)))
 	{	//also means that loaded line is not an empty string
 		//err gets ignored as the program can continue and err msg is already printed
-		parse_err = parse_inter_cmd(input, &list, line_buffer);
+		inter_err = inter_cmd(input, &list, line_buffer);
 	}
 
 	FILE *out_file = fopen(todo_file_path, "w");
-	if (!out_file)
-	 {
+	if (!out_file) //IDEA maybe make this to be saved and backup file somewhere?
+	{
 		fprintf(stderr, "Err: Failed to open file for writing at path: '%s'!\n", todo_file_path);
 		llist_destroy_contents(&list);
 		return 2;
-	 }
+	}
 	
 	//write_err gets ignored as if the error occurred the err msg was printed by write_entries
 	//if error occurs then the file gets emptied, but usually there's not much of room for error
@@ -961,5 +961,84 @@ int interactive_mode(FILE *input, const char *todo_file_path)
 	
 	fclose(out_file);
 	llist_destroy_contents(&list);
-	return write_err;
+	return write_err; //check errors
+}
+
+int noninter_cmd(llist *list, const char *str) //TODO
+{
+	printf("Noninter cmd: '%s'\n", str);
+	enum CmdType type;
+	if (!parse_cmd_type(str, &type))
+	{
+		//TODO err
+		return 1;
+	}
+	
+	switch (type)
+	{
+	default:
+		fprintf(stderr, "Err: Unimplemented command type!\n");
+		return 2;
+	}
+	
+	return 0;
+}
+
+int noninteractive_mode(const size_t options_num, const char **options, const char *todo_file_path)
+{	/*Handles the non-interactive commands from options arr, they must be specified after -e option
+	with exception when using single command - then it must be at the end of argv array
+	assumess options has options_num strings (NULLs shouldn't appear there), returns nonzero when error*/
+	
+	llist list = { NULL, NULL };
+	if (load_entries(&list, todo_file_path))
+	{
+		//this err msg assumess that more detailed err msg had been already printed by load_entries
+		fprintf(stderr,"Loading of todo entries from file failed! Aborting - no command were done.\n");
+		return 1;
+	}
+	
+	//TODO noninter mode
+	size_t cmd_counter = 0;
+	int loop_err = 0;
+	for (size_t i = 1; i < options_num; i++)
+	{
+		if (!options[i])
+		{
+			loop_err = 1; //might rarely happen even after checks in parse_options
+			break;
+		}
+		else if (strcmp("-e", options[i])) continue; //TODO last cmd
+		else if (i + 1 >= options_num) //we are at the end of the array
+		{
+			loop_err = 2; //should not happen because of checks in parsing options
+			break;
+		}
+		
+		i++; //now the index should point at the command we want to do
+		if (!options[i])
+		{
+			loop_err = 3; //might rarely happen even after checks in parse_options
+			break;
+		}
+		
+		noninter_cmd(&list, options[i]); //TODO
+	}
+	
+	//TODO handle loop_err errors
+
+	FILE *out_file = fopen(todo_file_path, "w");
+	if (!out_file) //IDEA maybe make this to be saved and backup file somewhere?
+	{
+		fprintf(stderr, "Err: Failed to open file for writing at path: '%s'!\n", todo_file_path);
+		llist_destroy_contents(&list);
+		return 2;
+	}
+	
+	//write_err gets ignored as if the error occurred the err msg was printed by write_entries
+	//if error occurs then the file gets emptied, but usually there's not much of room for error
+	int write_err = write_todofile(out_file, &list);
+	
+	fclose(out_file);
+	llist_destroy_contents(&list);
+	return write_err; //check errors
 }
