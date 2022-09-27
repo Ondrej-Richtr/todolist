@@ -68,9 +68,8 @@ enum Mode parse_options(const int argc, char **argv, char **path_ptr)
 					fprintf(stderr, "Err: You need to write command after -e option!\n");
 					return err_c;
 				}
-				enum CmdType tmp; //we wont be using this
-				//TODO also parse commands with parameters
-				if (!parse_cmd_type(argv[i], &tmp))
+				
+				if (!is_valid_cmd(argv[i], NULL))
 				{
 					fprintf(stderr, "Err: '%s' is not a valid command! Try 'help' for list of all commands.\n", argv[i]);
 					return err_c;
@@ -80,16 +79,14 @@ enum Mode parse_options(const int argc, char **argv, char **path_ptr)
 			break;
 		case undefopt_c:
 			{
-				enum CmdType tmp;
-				int parse_ret = parse_cmd_type(argv[i], &tmp);
 				//this means single command noninteractive mode
-				if (i + 1 == (size_t)argc && mode == intermode_c && parse_ret)
+				if (i + 1 == (size_t)argc && mode == intermode_c && is_valid_cmd(argv[i], NULL)) //IDEA maybe not NULL?
 				{
 					//we can return as this is last string in argv anyways
 					return nonintermode_c;
 				}
 				
-				//IDEA maybe change the err msg based on parse_ret
+				//IDEA maybe change the err msg based on value of 'mode'
 				fprintf(stderr, "Err: Unrecognized option '%s'! Try '--help' option for command line usage.\n", argv[i]);
 				return err_c;
 			}

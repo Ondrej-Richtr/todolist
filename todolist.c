@@ -279,6 +279,9 @@ int cmd_add(llist *list, char *data_buffer)
 		return 1;
 	}
 	
+	//maybe this could cause problems?
+	while (*data_buffer && isspace((int)*data_buffer)) data_buffer++; //skipping initial whitespaces
+	
 	if (generate_entry_from_string(data_buffer, entry)) //only deadline date can be loaded incorrectly
 	{
 		//error message should get printed by generate_entry_splitted
@@ -352,12 +355,14 @@ int cmd_mark(llist *list, const char *data_buffer)
 		return -1;
 	}
 	
+	while (*data_buffer && isspace((int)*data_buffer)) data_buffer++; //skipping initial whitespaces
+	
 	//TODO all_c is not working currently (should it even be allowed here?)
 	enum SpecType spec = all_c;
 	char spec_buffer[CLI_LINE_MAX_LEN + 1] = { 0 };
 	size_t spec_size = copy_until_delimiter(CLI_LINE_MAX_LEN, spec_buffer, data_buffer, isspace);	
 	
-	if (parse_specifier_type(spec_buffer, &spec) && spec != all_c) //specifier was specified and is not all_c
+	if (parse_specifier_type((char*)&spec_buffer, &spec) && spec != all_c) //specifier was specified and is not all_c
 	{
 		//skipping to the start of non-specifier in data_buffer
 		while (data_buffer[spec_size] && isspace((int)data_buffer[spec_size])) spec_size++;
@@ -390,6 +395,8 @@ int cmd_clear(llist *list, char *data_buffer)
 		fprintf(stderr, "Err: Program passed NULL pointer into clear command! Ignoring this command...\n");
 		return -1;
 	}
+	
+	while (*data_buffer && isspace((int)*data_buffer)) data_buffer++; //skipping initial whitespaces
 	
 	enum SpecType spec = done_c;
 	char *end = word_skip(data_buffer);
@@ -499,7 +506,7 @@ int cmd_move(llist *list, char *data_buffer)
 	}
 	
 	size_t from = 0, to = 0;
-	if (parse_range(data_buffer, &from, &to, &data_buffer))
+	if (parse_range(data_buffer, &from, &to, &data_buffer)) //this also skips initial whitespaces
 	{
 		size_t num_offset = 0;
 		int num_ret = str_to_num(data_buffer, &num_offset);
@@ -627,7 +634,8 @@ int cmd_help(char *data_buffer)
 	
 	char *cmd_start = data_buffer + index;
 	
-	while (data_buffer[index] && isalpha(data_buffer[index])) index++; //skipping to the end of word
+	//TODO maybe change this to skip_word?
+	while (data_buffer[index] && !isspace(data_buffer[index])) index++; //skipping to the end of word
 	data_buffer[index] = '\0';
 	
 	enum CmdType cmd = help_c; //placeholder
@@ -799,7 +807,38 @@ int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 		case swap_c: return cmd_swap(list, buffer);
 		case sort_c: return cmd_sort(list, buffer);
 		default: //this shouldn't normally happen
-		fprintf(stderr, "Err: Wrong command type specified '%d' in command caller!\n", type);
+			fprintf(stderr, "Err: Unimplemented command type '%d'!\n", type);
+			//fprintf(stderr, "Err: Wrong command type specified '%d' in command caller!\n", type);
+		return 1;
+	}
+	return 0; //should not happen at this point
+}
+
+int do_noninter_cmd(llist *list, enum CmdType type, const char *data)
+{	/*calls correct command specified by CmdType enum,
+	error msgs are printed by functions themselves, except for wrong type (which typically should not happen here)
+	returns non-zero if the command couldn't be executed successfuly*/
+	
+	//maximum of characters that are taken into account from data string
+	char buffer[CLI_LINE_MAX_LEN + 1] = { 0 }, *buffer_ptr = (char*)&buffer;
+	strncpy(buffer_ptr, data, CLI_LINE_MAX_LEN); //making copy so commands can modify the string
+	//IDEA maybe check whether overflow happened and print err?
+	
+	switch (type)
+	{
+		case help_c: return cmd_help(buffer_ptr);
+		case print_c: return cmd_print(list, buffer_ptr);
+		case add_c: return cmd_add(list, buffer_ptr);
+		case del_c: return llist_asc_index_map(list, buffer_ptr, delete_entry);
+		case mark_c: return cmd_mark(list, buffer_ptr);
+		case clear_c: return cmd_clear(list, buffer_ptr);
+		case change_c: return cmd_change(list, buffer_ptr, 0); //0 is for non-verbose mode (default in noninter)
+		case move_c: return cmd_move(list, buffer_ptr);
+		case swap_c: return cmd_swap(list, buffer_ptr);
+		case sort_c: return cmd_sort(list, buffer_ptr);
+		default: //this shouldn't normally happen
+			fprintf(stderr, "Err: Unimplemented command type '%d'!\n", type);
+			//fprintf(stderr, "Err: Wrong command type specified '%d' in command caller!\n", type);
 		return 1;
 	}
 	return 0; //should not happen at this point
@@ -887,6 +926,20 @@ int parse_cmd_type(const char *cmd, enum CmdType *type_ptr)
 	return 1;
 }
 
+int is_valid_cmd(const char *str, enum CmdType *type)
+{	//returns nonzero when str contains at the beginning valid command
+	char str_copy[CMD_NAME_MAX_LEN + 1] = { 0 }, *copy_ptr = (char*)&str_copy; //+1 for term. char.
+	
+	strncpy(copy_ptr, str, CMD_NAME_MAX_LEN); //let's hope the upper bound works
+	
+	while (*copy_ptr && isspace((int)*copy_ptr)) copy_ptr++; //skipping initial whitespaces
+	char *cmd_end = word_skip(copy_ptr); //shouldnt return NULL
+	*cmd_end = '\0'; //slicing cmd name away from the possible rest
+	
+	enum  CmdType tmp; //throwaway variable (parse_cmd_type does not take NULL)
+	return type ? parse_cmd_type(copy_ptr, type) : parse_cmd_type(copy_ptr, &tmp);
+}
+
 int inter_cmd(FILE *input, llist *list, char buffer[CLI_LINE_MAX_LEN + 1])
 {	/*parses which command to be done from buffer and if needed loads
 	more lines from the input, then executes correct cli function
@@ -968,19 +1021,17 @@ int noninter_cmd(llist *list, const char *str) //TODO
 {
 	printf("Noninter cmd: '%s'\n", str);
 	enum CmdType type;
-	if (!parse_cmd_type(str, &type))
+	if (!is_valid_cmd(str, &type))
 	{
-		//TODO err
+		//this shouldnt normally happen (noninter mode usually gets commands checked in parse_options)
+		fprintf(stderr, "Err: No valid command was parsed from '%s'!\n", str);
 		return 1;
 	}
 	
-	switch (type)
-	{
-	default:
-		fprintf(stderr, "Err: Unimplemented command type!\n");
-		return 2;
-	}
+	const char *data = word_skip_const(str);
+	printf("Noninter data: '%s'\n", data);
 	
+	if (do_noninter_cmd(list, type, data)) return 2; //err msg printed inside of cmds
 	return 0;
 }
 
@@ -1007,24 +1058,38 @@ int noninteractive_mode(const size_t options_num, const char **options, const ch
 			loop_err = 1; //might rarely happen even after checks in parse_options
 			break;
 		}
-		else if (strcmp("-e", options[i])) continue; //TODO last cmd
-		else if (i + 1 >= options_num) //we are at the end of the array
+		
+		if (i + 1 >= options_num) //the last item in the options array
 		{
-			loop_err = 2; //should not happen because of checks in parsing options
-			break;
+			if (!strcmp("-e", options[i])) //if it's -e
+			{
+				loop_err = 2; //should not happen because of checks in parsing options
+				break;
+			}
+		}
+		else
+		{
+			if (strcmp("-e", options[i])) continue; //if it's NOT -e - we just skip
+			i++; //safe to do as i + 1 < options_num
 		}
 		
-		i++; //now the index should point at the command we want to do
 		if (!options[i])
 		{
 			loop_err = 3; //might rarely happen even after checks in parse_options
 			break;
 		}
 		
-		noninter_cmd(&list, options[i]); //TODO
+		if (noninter_cmd(&list, options[i])) //noninter_cmd return value gets ignored
+		{
+			loop_err = 4;
+			break;
+		}
 	}
 	
-	//TODO handle loop_err errors
+	switch (loop_err)
+	{
+		//TODO handle loop_err errors
+	}
 
 	FILE *out_file = fopen(todo_file_path, "w");
 	if (!out_file) //IDEA maybe make this to be saved and backup file somewhere?

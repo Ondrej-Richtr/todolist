@@ -10,6 +10,7 @@
 #define TEXT_MAX_LEN 255
 #define NUM_BUFFER_SIZE 64
 #define CLI_LINE_MAX_LEN 1024
+#define CMD_NAME_MAX_LEN 23 //the maximum amount of chars cmd names can be (print, add, delete...)
 
 //structures:
 typedef struct
@@ -101,6 +102,8 @@ char* next_word_skip(char *string);
 
 char* word_skip(char *string);
 
+const char* word_skip_const(const char *string);
+
 size_t readline(FILE *f, size_t max_size, char buffer[max_size + 1]);
 
 //void skip_comment_blank_lines(FILE *f, int *in_char);
@@ -152,6 +155,8 @@ date_t get_current_date();
 int parse_direction(const char *string, size_t *end_index);
 
 int parse_cmd_type(const char *cmd, enum CmdType *type_ptr);
+
+int is_valid_cmd(const char *str, enum CmdType *type); //maybe move this somewhere else?
 
 int parse_specifier_type(char *string, enum SpecType *spec_ptr);
 

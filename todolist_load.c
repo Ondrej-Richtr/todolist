@@ -41,7 +41,7 @@ size_t copy_until_delimiter(size_t max_size, char buffer[max_size + 1], const ch
 }
 
 char* next_word_skip(char *string)
-{	//skipts to the START of the NEXT word or end of string
+{	//skips to the START of the NEXT word or end of string
 	//and puts term. char at the END of the FIRST word
 	if (!string) return NULL;
 	
@@ -54,6 +54,15 @@ char* next_word_skip(char *string)
 }
 
 char* word_skip(char *string)
+{	//skipts to the END of the current word
+	if (!string) return NULL;
+	
+	while (*string && !isspace((int)*string)) string++;
+	
+	return string;
+}
+
+const char* word_skip_const(const char *string)
 {	//skipts to the END of the current word
 	if (!string) return NULL;
 	
