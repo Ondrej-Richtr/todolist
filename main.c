@@ -6,7 +6,7 @@
 #endif
 #define VER0 0
 #define VER1 1
-#define VER2 1
+#define VER2 2
 
 
 enum Mode{ err_c, vermode_c, helpmode_c, intermode_c, nonintermode_c };

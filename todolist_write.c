@@ -80,3 +80,8 @@ int write_todofile(FILE *f, llist *list)
 	if (write_entries(f, list)) return 1; //errmsgs printed inside of write_entries
 	return 0;
 }
+
+void write_prompt() //IDEA maybe inline this?
+{	//writes prompt into stdout
+	fputs("> ", stdout);
+}

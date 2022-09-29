@@ -143,6 +143,7 @@ int write_entries(FILE *f, llist *list);
 
 int write_todofile(FILE *f, llist *list);
 
+void write_prompt();
 
 //todolist.c
 enum CmdType{ help_c, print_c, add_c, del_c, mark_c, clear_c, change_c, move_c, swap_c, sort_c };

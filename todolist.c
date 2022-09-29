@@ -114,7 +114,7 @@ int generate_entry_from_string(const char* string, todo_entry_t *entry)
 	char num_buffer[NUM_BUFFER_SIZE + 1] = { 0 };
 	
 	//first letter is checked if it's status
-	if (string[0] == 'X')
+	if (string[0] == 'X' && string[1] == '|') //this wont do buffer overflow
 	{
 		index++;
 		status = 'X';
@@ -153,12 +153,25 @@ int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size
 		return -1;
 	}
 	
-	size_t i = 0, num = 0, deleted = 0, last = 0, load_end = 0;
+	size_t i = 0, num = 0, deleted = 0, last = 0, load_end = 0, start = 0, end = 0;
 	int func_ret = 0, num_ret = 0;
+	char *range_end;
 	
 	while (string[i] != '\0')
 	{
+		//TODO
+		/*if (!parse_range(string + i, &start, &end, &range_end)) //it is a range
+		{
+			//TODO
+		}
+		else //not a range
+		{
+			//TODO
+			num_ret = str_to_num(string + i, &load_end);
+		}*/
+		
 		num_ret = str_to_num(string + i, &load_end);
+		
 		if (num_ret < 0)
 		{
 			fprintf(stderr, "Err: Wrong index format, it can't be a negaitve number or text!\n");
@@ -1011,10 +1024,12 @@ int interactive_mode(FILE *input, const char *todo_file_path)
 	size_t line_len = 0;
 	int inter_err = 0;
 	
+	//write_prompt();
 	while ((line_len = readline(input, CLI_LINE_MAX_LEN, line_buffer)))
 	{	//also means that loaded line is not an empty string
 		//err gets ignored as the program can continue and err msg is already printed
 		inter_err = inter_cmd(input, &list, line_buffer);
+		//write_prompt();
 	}
 
 	FILE *out_file = fopen(todo_file_path, "w");
