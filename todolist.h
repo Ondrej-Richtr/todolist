@@ -181,7 +181,7 @@ int cmd_mark(llist *list, const char *string);
 
 int cmd_clear(llist *list, char *data_buffer);
 
-int cmd_change(llist *list, char *data_buffer, int is_verbose);
+int cmd_change(llist *list, char *data_buffer, int is_verbose, int noninter);
 
 int cmd_move(llist *list, char *data_buffer);
 

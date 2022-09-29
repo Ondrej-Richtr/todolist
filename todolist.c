@@ -426,7 +426,7 @@ int cmd_clear(llist *list, char *data_buffer)
 	return 1;
 }
 
-int cmd_change(llist *list, char *data_buffer, int is_verbose)
+int cmd_change(llist *list, char *data_buffer, int is_verbose, int noninter)
 {
 	if (!list || !data_buffer)
 	{
@@ -436,7 +436,8 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose)
 	}
 	
 	//gets the number to change (only loads one)
-	int num_ret = str_to_num(data_buffer, NULL);
+	size_t offset = 0; //only for noniter mode
+	int num_ret = str_to_num(data_buffer, &offset);
 	if (num_ret < 0)
 	{
 		fprintf(stderr, "Err: Wrong index format in change command!\n");
@@ -464,20 +465,35 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose)
 		fputs("'\nWrite changed version at the next line or you can abort by writing an empty line\n", stdout);
 	}
 	
-	char line_buffer[CLI_LINE_MAX_LEN + 1] = { 0 }; //could be static
-	size_t line_len = readline(stdin, CLI_LINE_MAX_LEN, line_buffer);
-	if (!line_len)
+	char *entry_str = NULL, line_buffer[CLI_LINE_MAX_LEN + 1] = { 0 }; //could be static, only for inter mode
+	
+	if (noninter) //non-interactive mode - does not use line_buffer, uses data_buffer instead
 	{
-		if (is_verbose) puts("Entry was left unchanged.");
-		return 0;
+		entry_str = data_buffer + offset;
+		while (*entry_str && isspace((int)*entry_str)) entry_str++; //skipping whitespaces after num
+		if (!*entry_str)
+		{
+			fprintf(stderr, "Err: No text for new entry specified!\n");
+			return 6;
+		}
+	}
+	else //interactive mode - uses line_buffer from stdout and not data_buffer
+	{
+		size_t line_len = readline(stdin, CLI_LINE_MAX_LEN, line_buffer);
+		if (!line_len)
+		{
+			if (is_verbose) puts("Entry was left unchanged.");
+			return 0;
+		}
+		entry_str = (char*)&line_buffer;
 	}
 	
 	todo_entry_t new_entry;
-	int gen_err = generate_entry_from_string((char*)line_buffer, &new_entry);
+	int gen_err = generate_entry_from_string(entry_str, &new_entry); //should not modify give entry_str
 	if (gen_err)
 	{
 		//error message should get printed by generate_entry_splitted
-		fprintf(stderr, "Leaving old entry unchanged\n");
+		if (is_verbose) fprintf(stderr, "Leaving old entry unchanged\n");
 		//printf("Gen err: %d\n", gen_err);
 		return 4;
 	}
@@ -490,7 +506,6 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose)
 	
 	//change the old entry into new one
 	*old_entry = new_entry;
-	
 	if (is_verbose) printf("The #%u entry was changed successfully\n", num);
 	
 	return 0;
@@ -802,7 +817,7 @@ int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 		case del_c: return llist_asc_index_map(list, buffer, delete_entry);
 		case mark_c: return cmd_mark(list, buffer);
 		case clear_c: return cmd_clear(list, buffer);
-		case change_c: return cmd_change(list, buffer, 1); //1 is for verbose mode (default in interactive)
+		case change_c: return cmd_change(list, buffer, 1, 0); //1 for verbose, 0 for interactive mode
 		case move_c: return cmd_move(list, buffer);
 		case swap_c: return cmd_swap(list, buffer);
 		case sort_c: return cmd_sort(list, buffer);
@@ -832,7 +847,9 @@ int do_noninter_cmd(llist *list, enum CmdType type, const char *data)
 		case del_c: return llist_asc_index_map(list, buffer_ptr, delete_entry);
 		case mark_c: return cmd_mark(list, buffer_ptr);
 		case clear_c: return cmd_clear(list, buffer_ptr);
-		case change_c: return cmd_change(list, buffer_ptr, 0); //0 is for non-verbose mode (default in noninter)
+		case change_c: return cmd_change(list, buffer_ptr, 0, 1); //0 for not verbose, 1 for noninteractive mode
+			//fprintf(stderr, "Err: Change command is currently disabled in non-interactive mode!\n");
+			return 0;
 		case move_c: return cmd_move(list, buffer_ptr);
 		case swap_c: return cmd_swap(list, buffer_ptr);
 		case sort_c: return cmd_sort(list, buffer_ptr);
@@ -1019,7 +1036,7 @@ int interactive_mode(FILE *input, const char *todo_file_path)
 
 int noninter_cmd(llist *list, const char *str) //TODO
 {
-	printf("Noninter cmd: '%s'\n", str);
+	//printf("Noninter cmd: '%s'\n", str);
 	enum CmdType type;
 	if (!is_valid_cmd(str, &type))
 	{
@@ -1029,7 +1046,7 @@ int noninter_cmd(llist *list, const char *str) //TODO
 	}
 	
 	const char *data = word_skip_const(str);
-	printf("Noninter data: '%s'\n", data);
+	//printf("Noninter data: '%s'\n", data);
 	
 	if (do_noninter_cmd(list, type, data)) return 2; //err msg printed inside of cmds
 	return 0;
