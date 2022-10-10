@@ -143,7 +143,7 @@ int generate_entry_from_string(const char* string, todo_entry_t *entry)
 	return generate_entry_splitted(entry, status, orig_date, (char*)num_buffer);
 }
 
-int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size_t, size_t))
+int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size_t, size_t, size_t))
 {	//func should be the mapped function on the list
 	//func should return negative number when error and non-negative number of deleted entries
 	//this function returns non-zero when err
@@ -153,51 +153,53 @@ int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size
 		return -1;
 	}
 	
-	size_t i = 0, num = 0, deleted = 0, last = 0, load_end = 0, start = 0, end = 0;
+	size_t index = 0, deleted = 0, last = 0, load_end = 0, start = 0, end = 0;
 	int func_ret = 0, num_ret = 0;
-	char *range_end;
+	const char *range_end = NULL;
 	
-	while (string[i] != '\0')
+	//TODO check somehow if there's other text than indices and whitespace/separator
+	while (string[index] != '\0')
 	{
-		//TODO
-		/*if (!parse_range(string + i, &start, &end, &range_end)) //it is a range
+		//repetitive skipping to the next number to load
+		while (string[index] && (isseparator(string[index]) || isspace(string[index]))) index++;
+		if (!string[index]) break; //nothing after whitespace or separator
+
+		if (!parse_range_const(string + index, &start, &end, &range_end)) //it is a range
 		{
 			//TODO
+			index += range_end - string;
 		}
 		else //not a range
 		{
 			//TODO
-			num_ret = str_to_num(string + i, &load_end);
-		}*/
-		
-		num_ret = str_to_num(string + i, &load_end);
-		
-		if (num_ret < 0)
-		{
-			fprintf(stderr, "Err: Wrong index format, it can't be a negaitve number or text!\n");
-		}
-		else //ugly indentation, but whatever
-		{
-			num = (size_t)num_ret; //this should always cast correctly
-			//printf("num to delete: %u\n", num);
-			
-			if (!num || num <= last || num < deleted + 1) //when index is zero or not in ascending order
+			num_ret = str_to_num(string + index, &load_end);
+			index += load_end;
+			if (num_ret < 0)
 			{
-				if (num && num <= last) fprintf(stderr, "Err: Wrong index '%u', indices must be written in ascending order!\n", num);
-				else fprintf(stderr, "Err: Wrong index '%u' specified, it can't be zero!\n", num);
+				fprintf(stderr, "Err: Wrong index format, it can't be a negaitve number or text!\n");
+				continue;
 			}
-			//func shoould print it's own error msg when something goes wrong!
-			else if ((func_ret = func(list, num - 1 - deleted, num)) >= 0) //so we can track how many was successfuly deleted
-			{
-				deleted += func_ret;
-				last = num;
-			}
+			start = end = (size_t)num_ret;
 		}
-		//repetitive skipping to the next number to load
-		i += load_end;
-		while (string[i] != '\0' && !(isseparator(string[i]) || isspace(string[i]))) i++;
-		while (isseparator(string[i]) || isspace(string[i])) i++;
+		
+		//TODO replace num
+		if (!start || end < start || start <= last || start < deleted + 1) //when indices are zero or not in ascending order
+		{
+			//TODO err
+			//if (num && num <= last) fprintf(stderr, "Err: Wrong index '%u', indices must be written in ascending order!\n", num);
+			//else fprintf(stderr, "Err: Wrong index '%u' specified, it can't be zero!\n", num);
+			continue;
+		}
+		
+		//there we calculate actual index from visual index (by -deleted-1)
+		if ((func_ret = func(list, start - 1 - deleted, end - 1 - deleted, deleted + 1)) < 0) break;
+		//func shoould print it's own error msg when something goes wrong!
+		
+		//so we can track how many was successfuly deleted
+		deleted += func_ret;
+		last = end;
 	}
+	//TODO maybe print err when nothing done?
 	
 	return 0;
 }
@@ -322,42 +324,58 @@ int cmd_add(llist *list, char *data_buffer)
 	return 0;
 }
 
-int delete_entry(llist *list, size_t index, size_t orig_index)
-{	//deletes entry at given index from linked list
-	//returns -1 if the entry was out of bounds and prints the original index
-	//or otherwise couldnt get deleted
-	//and returns 1 if it was deleted succesfuly
-	if (llist_delete_nth_entry(list, index))
+int delete_range(llist *list, size_t indexS, size_t indexE, size_t orig_offset)
+{	//deletes given range of entries from linked list
+	//returns -1 if the entries were out of bounds and prints the original range
+	//or otherwise couldnt get delete them
+	//and returns the number of deleted entries (indexE - indexS + 1) if they were deleted succesfuly
+	if (llist_delete_range(list, indexS, indexE))
 	{
-		fprintf(stderr, "Err: Index '%u' to be deleted is out of bounds!\n", orig_index);
+		fprintf(stderr, "Err: Range '%u-%u' to be deleted is out of bounds!\n", indexS + orig_offset, indexE + orig_offset);
 		return -1;
 	}
-	return 1;
+	return indexE - indexS + 1; //should be positive
 }
 
-int mark_entry(llist *list, size_t index, size_t orig_index, int is_done)
+int mark_entry(llist *list, size_t indexS, size_t indexE, size_t orig_offset, int is_done)
 {
-	//returns -1 if something went wrong, otherwise returns 0
-	todo_entry_t *entry = llist_nth_entry(list, index);
-	if (!entry)
+	//returns -1 if something went wrong, otherwise returns 0 (-> nothing deleted)
+	//IDEA make this to be a map into section of linked list
+	size_t length = llist_length(list);
+	struct node *n = llist_nth_node(list, indexS);
+	if (!n)
 	{
-		fprintf(stderr, "Err: Index '%u' to be marked is out of bounds!\n", orig_index);
+		//fprintf(stderr, "Err: Index '%u' to be marked is out of bounds!\n", orig_index);
+		fprintf(stderr, "Err: Range '%u-%u' to be deleted is out of bounds!\n", indexS + orig_offset, indexE + orig_offset);
 		return -1;
 	}
 	
-	entry->status = is_done ? 1 : 0; //ternary operator to be sure that status attribute is always 1 or 0
+	if (indexE >= length)
+	{
+		fprintf(stderr, "Err: Range '%u-%u' to be deleted is out of bounds!\n", indexS + orig_offset, indexE + orig_offset);
+		return -2;
+	}
+	
+	for (size_t i = indexS; i <= indexE; i++)
+	{
+		//there entry should never be NULL, maybe add check for it too?
+		n->val->status = is_done ? 1 : 0; //ternary operator to be sure that status attribute is always 1 or 0		
+		n = n->next;
+	}
+	
 	return 0;
 }
 
-int mark_entry_done(llist *list, size_t index, size_t orig_index)
+int mark_entry_done(llist *list, size_t indexS, size_t indexE, size_t orig_offset)
 {	//marks entry at given index as done
-	return mark_entry(list, index, orig_index, 1);
+	return mark_entry(list, indexS, indexE, orig_offset, 1);
 }
 
-int mark_entry_undone(llist *list, size_t index, size_t orig_index)
+int mark_entry_undone(llist *list, size_t indexS, size_t indexE, size_t orig_offset)
 {	//same as mark_entry_done but marks it undone
-	return mark_entry(list, index, orig_index, 0);
+	return mark_entry(list, indexS, indexE, orig_offset, 0);
 }
+
 int cmd_mark(llist *list, const char *data_buffer)
 {	//does the interactive mark command, returns non-null when error
 	//data_buffer should be always smaller or same size as CLI_LINE_MAX_LEN + 1
@@ -827,7 +845,7 @@ int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 		case help_c: return cmd_help(buffer);
 		case print_c: return cmd_print(list, buffer);
 		case add_c: return cmd_add(list, buffer);
-		case del_c: return llist_asc_index_map(list, buffer, delete_entry);
+		case del_c: return llist_asc_index_map(list, buffer, delete_range);
 		case mark_c: return cmd_mark(list, buffer);
 		case clear_c: return cmd_clear(list, buffer);
 		case change_c: return cmd_change(list, buffer, 1, 0); //1 for verbose, 0 for interactive mode
@@ -844,6 +862,7 @@ int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 
 int do_noninter_cmd(llist *list, enum CmdType type, const char *data)
 {	/*calls correct command specified by CmdType enum,
+	
 	error msgs are printed by functions themselves, except for wrong type (which typically should not happen here)
 	returns non-zero if the command couldn't be executed successfuly*/
 	
@@ -857,7 +876,7 @@ int do_noninter_cmd(llist *list, enum CmdType type, const char *data)
 		case help_c: return cmd_help(buffer_ptr);
 		case print_c: return cmd_print(list, buffer_ptr);
 		case add_c: return cmd_add(list, buffer_ptr);
-		case del_c: return llist_asc_index_map(list, buffer_ptr, delete_entry);
+		case del_c: return llist_asc_index_map(list, buffer_ptr, delete_range);
 		case mark_c: return cmd_mark(list, buffer_ptr);
 		case clear_c: return cmd_clear(list, buffer_ptr);
 		case change_c: return cmd_change(list, buffer_ptr, 0, 1); //0 for not verbose, 1 for noninteractive mode
@@ -905,6 +924,28 @@ int parse_range(char *string, size_t *start, size_t *end, char **range_end)
 	
 	char *dash = string + offset;
 	if (!*dash || *dash != '-' || !isdigit((int)dash[1])) return 2; //dash shouldnt be NULL
+	
+	int end_ret = str_to_num(dash + 1, &offset);
+	if (end_ret < 0) return 3;
+	
+	if (start) *start = (size_t)start_ret;
+	if (end) *end = (size_t)end_ret;
+	if (range_end) *range_end = dash + 1 + offset;
+	
+	return 0;
+}
+int parse_range_const(const char *string, size_t *start, size_t *end, const char **range_end) //same as parse_range but with const char*
+{	/*parses input from string in format "startnum-endnum"
+	ignores whitespaces at the start and other text after
+	returns non-zero if bounds not found*/
+	while (*string && isspace(*string)) string++; //skipping initial whitespaces
+	
+	size_t offset = 0;
+	int start_ret = str_to_num(string, &offset);
+	if (start_ret < 0) return 1;
+	
+	const char *dash = string + offset;
+	if (!*dash || *dash != '-' || !isdigit(dash[1])) return 2; //dash shouldnt be NULL
 	
 	int end_ret = str_to_num(dash + 1, &offset);
 	if (end_ret < 0) return 3;

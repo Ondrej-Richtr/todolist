@@ -81,6 +81,8 @@ todo_entry_t *llist_nth_entry(llist *list, size_t n);
 
 int llist_delete_nth_entry(llist *list, size_t n);
 
+int llist_delete_range(llist *list, size_t indexS, size_t indexE);
+
 void llist_clear(llist *list, uint_least8_t status);
 
 int llist_disconnect(llist *list, llist *into, size_t start, size_t end);
@@ -166,7 +168,7 @@ int generate_entry_splitted(todo_entry_t *entry, const char status, const date_t
 
 int generate_entry_from_string(const char* string, todo_entry_t *entry);
 
-int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size_t, size_t));
+int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size_t, size_t, size_t));
 
 void print_todoentry(FILE *out, const todo_entry_t entry, const int style);
 
@@ -176,7 +178,7 @@ int cmd_print(llist *list, char *data_buffer);
 
 int cmd_add(llist *list, char *data_buffer);
 
-int delete_entry(llist *list, size_t index, size_t orig_index);
+//int delete_entry(llist *list, size_t index, size_t orig_index);
 
 int cmd_mark(llist *list, const char *string);
 
@@ -193,6 +195,7 @@ int cmd_swap(llist *list, char *data_buffer);
 int cmd_sort(llist *list, char *data_buffer);
 
 int parse_range(char *string, size_t *start, size_t *end, char **range_end);
+int parse_range_const(const char *string, size_t *start, size_t *end, const char **range_end);
 
 int interactive_mode(FILE *input, const char *todo_file_path);
 

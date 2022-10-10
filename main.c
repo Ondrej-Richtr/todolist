@@ -9,6 +9,7 @@
 #define VER2 2
 
 
+//options parsing stuff
 enum Mode{ err_c, vermode_c, helpmode_c, intermode_c, nonintermode_c };
 enum Option{ undefopt_c, fileopt_c, veropt_c, cmdopt_c, helpopt_c };
 enum Option parse_option(const char *str)
@@ -106,15 +107,14 @@ int main(int argc, char **argv)
 	char *path = NULL;
 	
 	enum Mode mode = parse_options(argc, argv, &path);
-	//printf("Mode: %d\n", mode);
 	
-	if (!path)
+	if (!path) //maybe this isn't problem for version or help mode?
 	{
-		//TODO err, maybe this is not a problem for help and version mode?
+		fprintf(stderr, "Err: Path to todofile is NULL! Exiting without changes.\n");
 		return EXIT_FAILURE;
 	}
 	
-	switch (mode) //TODO
+	switch (mode)
 	{
 	case vermode_c:
 		printf("todo %d.%d.%d\nWritten by Ondrej Richtr\n", VER0, VER1, VER2);
@@ -132,7 +132,7 @@ int main(int argc, char **argv)
 				fprintf(stderr, "Interactive err: %d\n", inter_err);
 				return EXIT_FAILURE;
 			}
-			break;
+			return EXIT_SUCCESS;
 		}
 	case nonintermode_c:
 		{
@@ -144,17 +144,13 @@ int main(int argc, char **argv)
 				fprintf(stderr, "Non-interactive err: %d\n", noninter_err);
 				return EXIT_FAILURE;
 			}
-			break;
+			return EXIT_SUCCESS;
 		}
 	case err_c: //errmsgs printed in parse_options
 		return EXIT_FAILURE;
-	default:
-		//TODO err - nonimplemented
-		return EXIT_FAILURE;
+	//default is to continue after switch
 	}
-	
-	//TODO move this into switch statement
-	
 
-	return EXIT_SUCCESS;
+	fprintf(stderr, "Err: Unimplemented todo mode! Exiting without changes.\n");
+	return EXIT_FAILURE;
 }

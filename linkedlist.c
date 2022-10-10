@@ -148,6 +148,16 @@ int llist_delete_nth_entry(llist *list, size_t n)
 	
 	return 0;
 }
+int llist_delete_range(llist *list, size_t indexS, size_t indexE)
+{
+	if (!list) return -1;
+	
+	llist destroy = { NULL, NULL };
+	if (llist_disconnect(list, &destroy, indexS, indexE)) return 1;
+	llist_destroy_contents(&destroy);
+	
+	return 0;
+}
 
 void llist_clear(llist *list, uint_least8_t status)
 {	//deletes all entries from linked list with given status
