@@ -178,8 +178,6 @@ int cmd_print(llist *list, char *data_buffer);
 
 int cmd_add(llist *list, char *data_buffer);
 
-//int delete_entry(llist *list, size_t index, size_t orig_index);
-
 int cmd_mark(llist *list, const char *string);
 
 int cmd_clear(llist *list, char *data_buffer);

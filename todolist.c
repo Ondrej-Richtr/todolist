@@ -154,7 +154,7 @@ int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size
 	}
 	
 	size_t index = 0, deleted = 0, last = 0, load_end = 0, start = 0, end = 0;
-	int func_ret = 0, num_ret = 0;
+	int func_ret = 0, num_ret = 0, no_err = 1; //no_err is flag (0=false, 1=true)
 	const char *range_end = NULL;
 	
 	//TODO check somehow if there's other text than indices and whitespace/separator
@@ -166,40 +166,52 @@ int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size
 
 		if (!parse_range_const(string + index, &start, &end, &range_end)) //it is a range
 		{
-			//TODO
-			index += range_end - string;
+			//printf("Range end pointer: '%s'\n", range_end);
+			index = range_end - string;
 		}
 		else //not a range
 		{
-			//TODO
 			num_ret = str_to_num(string + index, &load_end);
 			index += load_end;
 			if (num_ret < 0)
 			{
-				fprintf(stderr, "Err: Wrong index format, it can't be a negaitve number or text!\n");
+				//this should skip to the end of potential text or negative number (or anything that's not separator/space)
+				while (string[index] && !isseparator(string[index]) && !isspace(string[index])) index++;
+				fprintf(stderr, "Err: Wrong index format, it can't be a negaitve number or a text!\n");
+				no_err = 0; //err happened
 				continue;
 			}
 			start = end = (size_t)num_ret;
 		}
 		
-		//TODO replace num
 		if (!start || end < start || start <= last || start < deleted + 1) //when indices are zero or not in ascending order
 		{
-			//TODO err
-			//if (num && num <= last) fprintf(stderr, "Err: Wrong index '%u', indices must be written in ascending order!\n", num);
-			//else fprintf(stderr, "Err: Wrong index '%u' specified, it can't be zero!\n", num);
+
+			if (start && end < start) fprintf(stderr, "Err: Start of a range '%u-%u' can't be larger than the end!\n", start, end);
+			else if (!start) fprintf(stderr, "Err: Wrong index specified, it can't be zero!\n");
+			else fprintf(stderr, "Err: Wrong index/range '%u', indices must be written in ascending order!\n", start);
+			no_err = 0; //err happened
 			continue;
 		}
 		
 		//there we calculate actual index from visual index (by -deleted-1)
-		if ((func_ret = func(list, start - 1 - deleted, end - 1 - deleted, deleted + 1)) < 0) break;
-		//func shoould print it's own error msg when something goes wrong!
+		if ((func_ret = func(list, start - 1 - deleted, end - 1 - deleted, deleted + 1)) < 0)
+		{
+			no_err = 0; //func should print it's own error msg when something goes wrong!
+			break;
+		}
 		
 		//so we can track how many was successfuly deleted
 		deleted += func_ret;
 		last = end;
+		
 	}
-	//TODO maybe print err when nothing done?
+
+	if (!end && no_err) //we print err when no other err happened and there was no successful func call
+	{
+		fprintf(stderr, "Err: Bad formating in current command! No changes were made.\n");
+		//maybe here return something non-negative?
+	}
 	
 	return 0;
 }
@@ -331,34 +343,41 @@ int delete_range(llist *list, size_t indexS, size_t indexE, size_t orig_offset)
 	//and returns the number of deleted entries (indexE - indexS + 1) if they were deleted succesfuly
 	if (llist_delete_range(list, indexS, indexE))
 	{
-		fprintf(stderr, "Err: Range '%u-%u' to be deleted is out of bounds!\n", indexS + orig_offset, indexE + orig_offset);
+		if (indexS == indexE) fprintf(stderr, "Err: Index '%u' to be deleted is out of bounds!\n", indexS + orig_offset);
+		else fprintf(stderr, "Err: Range '%u-%u' to be deleted is out of bounds!\n", indexS + orig_offset, indexE + orig_offset);
 		return -1;
 	}
 	return indexE - indexS + 1; //should be positive
 }
 
-int mark_entry(llist *list, size_t indexS, size_t indexE, size_t orig_offset, int is_done)
+int mark_range(llist *list, size_t indexS, size_t indexE, size_t orig_offset, int is_done)
 {
-	//returns -1 if something went wrong, otherwise returns 0 (-> nothing deleted)
+	//returns negative number if something went wrong, otherwise returns 0 (-> nothing deleted)
 	//IDEA make this to be a map into section of linked list
 	size_t length = llist_length(list);
 	struct node *n = llist_nth_node(list, indexS);
 	if (!n)
 	{
-		//fprintf(stderr, "Err: Index '%u' to be marked is out of bounds!\n", orig_index);
-		fprintf(stderr, "Err: Range '%u-%u' to be deleted is out of bounds!\n", indexS + orig_offset, indexE + orig_offset);
+		if (indexS == indexE) fprintf(stderr, "Err: Index '%u' to be marked is out of bounds!\n", indexS + orig_offset);
+		else fprintf(stderr, "Err: Range '%u-%u' to be marked is out of bounds!\n", indexS + orig_offset, indexE + orig_offset);
 		return -1;
 	}
 	
 	if (indexE >= length)
 	{
-		fprintf(stderr, "Err: Range '%u-%u' to be deleted is out of bounds!\n", indexS + orig_offset, indexE + orig_offset);
+		if (indexS == indexE) fprintf(stderr, "Err: Index '%u' to be marked is out of bounds!\n", indexS + orig_offset);
+		else fprintf(stderr, "Err: Range '%u-%u' to be marked is overflowing the bounds!\n", indexS + orig_offset, indexE + orig_offset);
 		return -2;
 	}
 	
 	for (size_t i = indexS; i <= indexE; i++)
 	{
-		//there entry should never be NULL, maybe add check for it too?
+		if (!n) //usually shluldnt happen (we checked the length before)
+		{
+			fprintf(stderr, "Err: Unexpected NULL in mark command! Entries starting from '%u' are left unchanged.", i + orig_offset);
+			return -3;
+		}
+		
 		n->val->status = is_done ? 1 : 0; //ternary operator to be sure that status attribute is always 1 or 0		
 		n = n->next;
 	}
@@ -366,14 +385,14 @@ int mark_entry(llist *list, size_t indexS, size_t indexE, size_t orig_offset, in
 	return 0;
 }
 
-int mark_entry_done(llist *list, size_t indexS, size_t indexE, size_t orig_offset)
+int mark_range_done(llist *list, size_t indexS, size_t indexE, size_t orig_offset)
 {	//marks entry at given index as done
-	return mark_entry(list, indexS, indexE, orig_offset, 1);
+	return mark_range(list, indexS, indexE, orig_offset, 1);
 }
 
-int mark_entry_undone(llist *list, size_t indexS, size_t indexE, size_t orig_offset)
-{	//same as mark_entry_done but marks it undone
-	return mark_entry(list, indexS, indexE, orig_offset, 0);
+int mark_range_undone(llist *list, size_t indexS, size_t indexE, size_t orig_offset)
+{	//same as mark_range_done but marks it undone
+	return mark_range(list, indexS, indexE, orig_offset, 0);
 }
 
 int cmd_mark(llist *list, const char *data_buffer)
@@ -406,8 +425,8 @@ int cmd_mark(llist *list, const char *data_buffer)
 		
 		switch (spec)
 		{
-			case done_c: return llist_asc_index_map(list, data_buffer + spec_size, mark_entry_done);
-			case undone_c: return llist_asc_index_map(list, data_buffer + spec_size, mark_entry_undone);
+			case done_c: return llist_asc_index_map(list, data_buffer + spec_size, mark_range_done);
+			case undone_c: return llist_asc_index_map(list, data_buffer + spec_size, mark_range_undone);
 		}
 		//this should not happen (for now):
 		fprintf(stderr, "Err: Unsupported specifier '%s' in mark command!\n", (char*)spec_buffer);
