@@ -118,18 +118,28 @@ int main(int argc, char **argv)
 	{
 	case vermode_c:
 		printf("todo %d.%d.%d\nWritten by Ondrej Richtr\n", VER0, VER1, VER2);
-		break;
-	case helpmode_c:
-		//TODO implement commandline help
-		printf("Help not implemented yet!\n");
-		break;
+		return EXIT_SUCCESS;
+	case helpmode_c: //TODO maybe move this into separate function
+		{
+			//IDEA --help option mode even for each specific command
+			char temp = '\0'; //substitution for empty string to pass into cmd_help
+			int help_err = cmd_help(&temp, 1); 
+			if (help_err) //1 is for --help option mode (0 is for interactive mode)
+			{
+				//no need to print errmsg here as it should be printed inside of cmd_help
+				//RELEASE no need to print this in release version
+				fprintf(stderr, "Help mode err: %d\n", help_err);
+				return EXIT_FAILURE;
+			}
+			return EXIT_SUCCESS;
+		}
 	case intermode_c:
 		{
 			int inter_err = interactive_mode(f, path);
 			if (inter_err)
 			{
 				//RELEASE no need to print this in release version
-				fprintf(stderr, "Interactive err: %d\n", inter_err);
+				fprintf(stderr, "Interactive mode err: %d\n", inter_err);
 				return EXIT_FAILURE;
 			}
 			return EXIT_SUCCESS;
@@ -141,7 +151,7 @@ int main(int argc, char **argv)
 			if (noninter_err)
 			{
 				//RELEASE no need to print this in release version
-				fprintf(stderr, "Non-interactive err: %d\n", noninter_err);
+				fprintf(stderr, "Non-interactive mode err: %d\n", noninter_err);
 				return EXIT_FAILURE;
 			}
 			return EXIT_SUCCESS;

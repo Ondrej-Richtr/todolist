@@ -186,7 +186,7 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose, int noninter);
 
 int cmd_move(llist *list, char *data_buffer);
 
-int cmd_help(char *data_buffer);
+int cmd_help(char *data_buffer, int isoption);
 
 int cmd_swap(llist *list, char *data_buffer);
 

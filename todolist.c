@@ -660,10 +660,16 @@ int cmd_move(llist *list, char *data_buffer)
 	return 0;
 }
 
-void print_basichelp()
+void print_basichelp(int isoption)
 {
+	if (isoption) //TODO implement isoption version
+	{
+		printf("Basic help for --help is not implemented yet!\n");
+		return;
+	}
+	
 	//some basic help print
-	puts("-------------HELP-------------");
+	puts("------------INTERACTIVE HELP-------------");
 	puts("Interactive mode commands are:");
 	puts("\t'help' - prints this help on stdout");
 	puts("\t'print' - prints all todolist entries in current memory on stdout");
@@ -675,11 +681,13 @@ void print_basichelp()
 	puts("\t'move' - moves one or range of entries to specified index or relatively");
 	puts("\t'swap' - swaps two specified entries in current todolist");
 	puts("\t'sort' - sorts the todolist by done/undone/deadline/text/age");
-	puts("------------------------------");
+	puts("-----------------------------------------");
 }
 
-int cmd_help(char *data_buffer)
-{
+int cmd_help(char *data_buffer, int isoption)
+{	//help command, prints basic help for interactive mode and --help option mode (when isoption)
+	//or it print help for specific command when specified (isoption is then ignored)
+	//returns non-zero when error
 	if (!data_buffer)
 	{
 		//TODO probably bad as the interactive while loops continues
@@ -687,27 +695,28 @@ int cmd_help(char *data_buffer)
 		return -1;
 	}
 	
-	size_t index = 0;
+	while (*data_buffer && isspace((int)*data_buffer)) data_buffer++; //skipping the whitespaces
 	
-	while (data_buffer[index] && isspace(data_buffer[index])) index++; //skipping the whitespaces
-	
-	if (!data_buffer[index])
+	if (!*data_buffer)
 	{
-		print_basichelp();
+		print_basichelp(isoption);
 		return 0;
 	}
+	else if (isoption)
+	{
+		//TODO remove this after implementing --help option mode for each specific cmd
+		fprintf(stderr, "Err: Non-empty string passed into help command from --help option mode!\n");
+		return 1;
+	}
 	
-	char *cmd_start = data_buffer + index;
-	
-	//TODO maybe change this to skip_word?
-	while (data_buffer[index] && !isspace(data_buffer[index])) index++; //skipping to the end of word
-	data_buffer[index] = '\0';
+	//skips to the end of possible cmd word
+	char *throwaway = next_word_skip(data_buffer); //throwaway is ignored
 	
 	enum CmdType cmd = help_c; //placeholder
-	if (!parse_cmd_type(cmd_start, &cmd))
+	if (!parse_cmd_type(data_buffer, &cmd))
 	{
-		fprintf(stderr, "Err: Unknown command: '%s'! Type 'help' to get list of all known commands.\n", cmd_start);
-		return 1;
+		fprintf(stderr, "Err: Unknown command: '%s'! Type 'help' to get list of all known commands.\n", data_buffer);
+		return 2;
 	}
 	
 	switch(cmd)
@@ -768,7 +777,7 @@ int cmd_help(char *data_buffer)
 		puts("Example - 'sort text' or 'sort deadline undone' (this is almost the same as 'sort deadline' followed by 'sort undone')");
 		break;
 	default:
-		printf("Help for command: '%s' is not implemented yet or something wrong happened!\n", cmd_start);
+		printf("Help for command: '%s' is not implemented yet or something wrong happened!\n", data_buffer);
 		break;
 	}
 	
@@ -861,7 +870,7 @@ int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 	returns non-zero if the command couldn't be executed successfuly*/
 	switch (type)
 	{
-		case help_c: return cmd_help(buffer);
+		case help_c: return cmd_help(buffer, 0); //0 for an interactive mode (1 is --help mode)
 		case print_c: return cmd_print(list, buffer);
 		case add_c: return cmd_add(list, buffer);
 		case del_c: return llist_asc_index_map(list, buffer, delete_range);
@@ -881,7 +890,6 @@ int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 
 int do_noninter_cmd(llist *list, enum CmdType type, const char *data)
 {	/*calls correct command specified by CmdType enum,
-	
 	error msgs are printed by functions themselves, except for wrong type (which typically should not happen here)
 	returns non-zero if the command couldn't be executed successfuly*/
 	
@@ -892,7 +900,11 @@ int do_noninter_cmd(llist *list, enum CmdType type, const char *data)
 	
 	switch (type)
 	{
-		case help_c: return cmd_help(buffer_ptr);
+		case help_c:
+		{
+			fprintf(stderr, "Err: Help command is not implemented in non-interactive mode! Use option '--help' or help in interactive mode.\n");
+			return 2;
+		}
 		case print_c: return cmd_print(list, buffer_ptr);
 		case add_c: return cmd_add(list, buffer_ptr);
 		case del_c: return llist_asc_index_map(list, buffer_ptr, delete_range);
@@ -1177,11 +1189,6 @@ int noninteractive_mode(const size_t options_num, const char **options, const ch
 			break;
 		}
 	}
-	
-	switch (loop_err)
-	{
-		//TODO handle loop_err errors
-	}
 
 	FILE *out_file = fopen(todo_file_path, "w");
 	if (!out_file) //IDEA maybe make this to be saved and backup file somewhere?
@@ -1194,8 +1201,13 @@ int noninteractive_mode(const size_t options_num, const char **options, const ch
 	//write_err gets ignored as if the error occurred the err msg was printed by write_entries
 	//if error occurs then the file gets emptied, but usually there's not much of room for error
 	int write_err = write_todofile(out_file, &list);
-	
 	fclose(out_file);
+
+	switch (loop_err) //this is moved after writing changes into todofile - if writing fails there is no reason to print this too
+	{
+		//TODO handle loop_err errors - print when rest of cmd query ignored
+	}
+	
 	llist_destroy_contents(&list);
 	return write_err; //check errors
 }
