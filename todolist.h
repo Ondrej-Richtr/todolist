@@ -10,7 +10,9 @@
 #define TEXT_MAX_LEN 255
 #define NUM_BUFFER_SIZE 64
 #define CLI_LINE_MAX_LEN 1024
-#define CMD_NAME_MAX_LEN 23 //the maximum amount of chars cmd names can be (print, add, delete...)
+//the maximum of (guaranteed) chars cmd names can be - print, add, delete...
+//it can some cases commands of longer length might be recognised (in interactive mode)
+#define CMD_NAME_MAX_LEN 23
 
 //structures:
 typedef struct
@@ -163,6 +165,10 @@ int is_valid_cmd(const char *str, enum CmdType *type); //maybe move this somewhe
 
 int parse_specifier_type(char *string, enum SpecType *spec_ptr);
 
+int parse_opt_basichelp(const char *str);
+
+int parse_opt_cmdhelp(const char *str);
+
 //cli functionality
 int generate_entry_splitted(todo_entry_t *entry, const char status, const date_t orig_date, char *dead_date);
 
@@ -187,6 +193,8 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose, int noninter);
 int cmd_move(llist *list, char *data_buffer);
 
 int cmd_help(char *data_buffer, int isoption);
+
+int cmd_help_noninter_parse(size_t argc, const char** argv);
 
 int cmd_swap(llist *list, char *data_buffer);
 

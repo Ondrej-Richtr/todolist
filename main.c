@@ -10,17 +10,55 @@
 
 
 //options parsing stuff
-enum Mode{ err_c, vermode_c, helpmode_c, intermode_c, nonintermode_c };
-enum Option{ undefopt_c, fileopt_c, veropt_c, cmdopt_c, helpopt_c };
-enum Option parse_option(const char *str)
+enum Mode{ err_c, vermode_c, helpmode_c, basichelpmode_c, intermode_c, nonintermode_c };
+enum Option{ undefopt_c, syntaxerrE_helpopt_c, syntaxerrC_helpopt_c, fileopt_c,
+	veropt_c, cmdopt_c, helpopt_c, simplehelpopt_c };
+
+int parse_opt_basichelp(const char *str)
+{	//returns positive number if given string is '-h' (1) or '--help' (2)
+	//negative number if given string starts with '--help' (-1), zero otherwise
+	const char helpstr[] = "--help";
+	size_t helpstr_len = sizeof(helpstr)/sizeof(char) - 1; //-1 as we dont count term.char.	
+	
+	if (!strcmp("-h", str)) return 1; //str is '-h'
+	if (strncmp((char*)&helpstr, str, helpstr_len)) return 0; //str does not start with '--help'
+
+	return str[helpstr_len] ? -1 : 2; //checks if it is more than just '--help'
+}
+
+int parse_opt_cmdhelp(const char *str)
+{	//returns negative number (-1) if given string starts with '--help=' and
+	//doesnt have any text after '=' char (e.g. only whitespaces follow after '=')
+	//returns positive number (1) if there is non-whitespace text, zero otherwise
+	const char cmdhelpstr[] = "--help=";
+	size_t cmdhelpstr_len = sizeof(cmdhelpstr)/sizeof(char) - 1; //-1 as we dont count term.char.	
+	
+	if (strncmp((char*)&cmdhelpstr, str, cmdhelpstr_len)) return 0; //does not start with '--help='
+	
+	size_t index = cmdhelpstr_len;
+	while (str[index] && isspace((int)str[index])) index++; //skipping whitespaces
+	
+	return str[index] ? 1 : -1;
+}
+
+enum Option parse_option_string(const char *str)
 {
 	if (!str) return undefopt_c;
 	
 	if (!strcmp("-e", str)) return cmdopt_c;
 	if (!strcmp("-f", str)) return fileopt_c;
 	if (!strcmp("-v", str) || !strcmp("--version", str)) return veropt_c; //maybe later -v as verbose mode?
-	if (!strcmp("-h", str) || !strcmp("--help", str)) return helpopt_c;
-	return undefopt_c;
+	
+	int parse_basichelp = parse_opt_basichelp(str);
+	if (!parse_basichelp) return undefopt_c; //is not '-h' and does not start with "--help"
+	if (parse_basichelp > 0) return simplehelpopt_c;
+
+	//at this point we know that str starts with "--help"
+	int parse_cmdhelp = parse_opt_cmdhelp(str);
+	if (!parse_cmdhelp) return syntaxerrE_helpopt_c; //not starting with "--help=" (equals missing)
+	if (parse_cmdhelp > 0) return helpopt_c;
+	
+	return syntaxerrC_helpopt_c; //empty command specifier
 }
 
 enum Mode parse_options(const int argc, char **argv, char **path_ptr)
@@ -39,8 +77,7 @@ enum Mode parse_options(const int argc, char **argv, char **path_ptr)
 	
 	for (size_t i = 1; i < (size_t)argc && argv[i]; i++)
 	{
-		//printf("Parsing option: '%s'\n", argv[i]);
-		opt = parse_option(argv[i]);
+		opt = parse_option_string(argv[i]);
 		
 		switch (opt)
 		{
@@ -58,8 +95,11 @@ enum Mode parse_options(const int argc, char **argv, char **path_ptr)
 		case veropt_c:
 			mode = vermode_c; //we dont return now - we want to check other options too
 			break;
-		case helpopt_c: //this makes help mode prioritized over others except the version mode
+		case helpopt_c: 		//this makes help mode prioritized over others except the version mode
 			if (mode != vermode_c) mode = helpmode_c;
+			break;
+		case simplehelpopt_c: 	//simple help has same priority as command help (the last one is used)
+			if (mode != vermode_c) mode = basichelpmode_c;
 			break;
 		case cmdopt_c:
 			{
@@ -70,6 +110,7 @@ enum Mode parse_options(const int argc, char **argv, char **path_ptr)
 					return err_c;
 				}
 				
+				//TODO check this with regard to CMD_NAME_MAX_LEN
 				if (!is_valid_cmd(argv[i], NULL))
 				{
 					fprintf(stderr, "Err: '%s' is not a valid command! Try 'help' for list of all commands.\n", argv[i]);
@@ -78,8 +119,15 @@ enum Mode parse_options(const int argc, char **argv, char **path_ptr)
 				if (mode == intermode_c) mode = nonintermode_c;
 			}
 			break;
+		case syntaxerrE_helpopt_c:
+			fprintf(stderr, "Err: Bad syntax for command help option! Usage is '--help=COMMAND'.\n");
+			return err_c;
+		case syntaxerrC_helpopt_c:
+			fprintf(stderr, "Err: Bad syntax for command help option - empty command! Use '--help=COMMAND' syntax.\n");
+			return err_c;
 		case undefopt_c:
 			{
+				
 				//this means single command noninteractive mode
 				if (i + 1 == (size_t)argc && mode == intermode_c && is_valid_cmd(argv[i], NULL)) //IDEA maybe not NULL?
 				{
@@ -117,18 +165,24 @@ int main(int argc, char **argv)
 	switch (mode)
 	{
 	case vermode_c:
-		printf("todo %d.%d.%d\nWritten by Ondrej Richtr\n", VER0, VER1, VER2);
+		printf("todo %d.%d.%d\nWritten by Ondrej Richtr\n", VER0, VER1, VER2); //IDEA add link to gitrepo/webpage
 		return EXIT_SUCCESS;
-	case helpmode_c: //TODO maybe move this into separate function
+	case helpmode_c:
+		{
+			int help_ret = cmd_help_noninter_parse((size_t)argc, (const char**)argv);
+			fprintf(stderr, "Command help mode err: %d\n", help_ret); //RELEASE no need to print this in release version
+			return EXIT_SUCCESS;
+		}
+	case basichelpmode_c: //TODO maybe move this into separate function
 		{
 			//IDEA --help option mode even for each specific command
 			char temp = '\0'; //substitution for empty string to pass into cmd_help
-			int help_err = cmd_help(&temp, 1); 
-			if (help_err) //1 is for --help option mode (0 is for interactive mode)
+			int help_ret = cmd_help(&temp, 1); //1 is for --help option mode (0 is for interactive mode) 
+			if (help_ret)
 			{
 				//no need to print errmsg here as it should be printed inside of cmd_help
 				//RELEASE no need to print this in release version
-				fprintf(stderr, "Help mode err: %d\n", help_err);
+				fprintf(stderr, "Basic help mode err: %d\n", help_ret);
 				return EXIT_FAILURE;
 			}
 			return EXIT_SUCCESS;

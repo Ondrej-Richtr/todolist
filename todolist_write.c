@@ -62,9 +62,12 @@ int write_entries(FILE *f, llist *list)
 void write_standard_comments(FILE *f)
 {	//writes the standard comment lines at the beginning of each todofile
 	//which means after each run of this todo program only those comment lines will be in todofile
-	fputs("#Lines marked with '#' at the beginning are comments.\n", f);
-	fputs("#This file stores todo entries for todo program, you typically shouldn't modify this file directly (but it's up to you).\n", f);
-	fputs("#Note that after each run of todo program this file gets wiped out and rewritten again, which mean any other comments other then those three would get deleted.\n", f);
+	fputs("# Lines marked with '#' at the beginning are comments.\n", f);
+	fputs("# This file stores todo entries for todo program, you typically\
+ shouldn't modify this file directly (but it's up to you).\n", f);
+	fputs("# Note that after each run of todo program this file gets wiped\
+ out and rewritten again, which means any other comments other then those\
+ three will get deleted.\n", f);
 }
 
 int write_todofile(FILE *f, llist *list)
