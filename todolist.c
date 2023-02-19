@@ -744,8 +744,9 @@ int cmd_help(char *data_buffer, int isoption)
 		return 0;
 	}
 	
+	//TODO process the data_tail aswell
 	//skips to the end of possible cmd word
-	char *throwaway = next_word_skip(data_buffer); //throwaway is ignored
+	char *data_tail = next_word_skip(data_buffer); //data_tail is ignored
 	
 	enum CmdType cmd = help_c; //placeholder
 	if (!parse_cmd_type(data_buffer, &cmd))
@@ -1145,11 +1146,16 @@ int parse_cmd_type(const char *cmd, enum CmdType *type_ptr)
 
 int is_valid_cmd(const char *str, enum CmdType *type)
 {	//returns nonzero when str contains at the beginning valid command
+	size_t offset = 0;
 	char str_copy[CMD_NAME_MAX_LEN + 1] = { 0 }, *copy_ptr = (char*)&str_copy; //+1 for term. char.
+
+	//TODO test this
+	//skipping initial whitespaces of the input
+	while (str[offset] && isspace((int)str[offset])) offset++;
 	
-	strncpy(copy_ptr, str, CMD_NAME_MAX_LEN); //let's hope the upper bound works
+	strncpy(copy_ptr, str + offset, CMD_NAME_MAX_LEN); //let's hope the upper bound works
 	
-	while (*copy_ptr && isspace((int)*copy_ptr)) copy_ptr++; //skipping initial whitespaces
+	//while (*copy_ptr && isspace((int)*copy_ptr)) copy_ptr++; //skipping initial whitespaces
 	char *cmd_end = word_skip(copy_ptr); //shouldnt return NULL
 	*cmd_end = '\0'; //slicing cmd name away from the possible rest
 	
@@ -1158,39 +1164,39 @@ int is_valid_cmd(const char *str, enum CmdType *type)
 }
 
 int inter_cmd(FILE *input, llist *list, char buffer[CLI_LINE_MAX_LEN + 1])
-{	/*parses which command to be done from buffer and if needed loads
-	more lines from the input, then executes correct cli function
+{	/*parses which command to be done from the buffer,
+	then executes correct cli function
 	returns 1 if wrong command or other non-zero if error*/
-	size_t index = 0, cmd_end = 0;
+	buffer[CLI_LINE_MAX_LEN] = '\0'; //_security reasons_TM
+	char *cmd_ptr = (char*)buffer; //TODO check all (char*)& converions!
+	//size_t index = 0, cmd_end = 0;
 	
-	//skipping to the end of first word
-	while (buffer[index] && !isspace(buffer[index])) index++;
-	cmd_end = index;
+	//skipping initial whitespaces
+	while (*cmd_ptr && isspace((int)*cmd_ptr)) cmd_ptr++;
+	//while (buffer[index] && isspace((int)buffer[index])) index++;
+	
+	//TODO
+	char* tail_ptr = next_word_skip(cmd_ptr);
+	
+	//skipping to the end of the first word (if there is one)
+	//while (buffer[index] && !isspace((int)buffer[index])) index++;
+	//cmd_end = index;
 	
 	//skipping whitespaces
-	while (buffer[index] && isspace(buffer[index])) index++;
+	//while (buffer[index] && isspace(buffer[index])) index++;
 	
+	//buffer[cmd_end] = '\0'; //splitting command string from the rest
+	
+	//TODO change to is_valid_cmp - maybe not needed?
 	enum CmdType type;
-	buffer[cmd_end] = '\0'; //splitting command string from the rest
-	
-	//TODO change to is_valid_cmp
-	if (!parse_cmd_type((char*)buffer, &type))
+	//is_valid_cmd((char*)&buffer, &type);
+	if (!parse_cmd_type(cmd_ptr, &type))
 	{
-		fprintf(stderr, "Err: Unknown command: '%s'! Type 'help' to get list of all known commands.\n", (char*)buffer);
+		fprintf(stderr, "Err: Unknown command: '%s'! Type 'help' to get list of all known commands.\n", cmd_ptr);
 		return 1;
 	}
 	
-	//reading next line if more input needed (for add, delete, clear and mark)
-	/*if (!buffer[index] && (type == add_c || type == del_c 
-			|| type == mark_c || type == clear_c))
-	{
-		index = 0;
-		//amount of loaded chars is not needed
-		readline(input, CLI_LINE_MAX_LEN, buffer);
-		while (buffer[index] && isspace(buffer[index])) index++;
-	}*/
-	
-	if (do_inter_cmd(list, type, (char*)buffer + index)) return 2;
+	if (do_inter_cmd(list, type, tail_ptr)) return 2;
 	
 	return 0;
 }
@@ -1212,6 +1218,7 @@ int interactive_mode(FILE *input, const char *todo_file_path)
 	size_t line_len = 0;
 	int inter_err = 0;
 	
+	//IDEA make prompt work
 	//write_prompt();
 	while ((line_len = readline(input, CLI_LINE_MAX_LEN, line_buffer)))
 	{	//also means that loaded line is not an empty string
