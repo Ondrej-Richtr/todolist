@@ -1,7 +1,7 @@
 # todolist
 Terminal based TO-DO list
 
-primarily for my usage and anyone who dares to try it
+#### *Important: This repository is currently in rework, you (probably) should rather use some older release. Also note that following text and helps are incomplete and maybe even incorrect.*
 
 - Installation:
  1. Clone this repository anywhere you want
