@@ -110,7 +110,6 @@ enum Mode parse_options(const int argc, char **argv, char **path_ptr)
 					return err_c;
 				}
 				
-				//TODO check this with regard to CMD_NAME_MAX_LEN
 				if (!is_valid_cmd(argv[i], NULL))
 				{
 					fprintf(stderr, "Err: '%s' is not a valid command! Try 'help' for list of all commands.\n", argv[i]);
@@ -173,18 +172,9 @@ int main(int argc, char **argv)
 			fprintf(stderr, "Command help mode err: %d\n", help_ret); //RELEASE no need to print this in release version
 			return EXIT_SUCCESS;
 		}
-	case basichelpmode_c: //TODO maybe move this into separate function
+	case basichelpmode_c:
 		{
-			//IDEA --help option mode even for each specific command
-			char temp = '\0'; //substitution for empty string to pass into cmd_help
-			int help_ret = cmd_help(&temp, 1); //1 is for --help option mode (0 is for interactive mode) 
-			if (help_ret)
-			{
-				//no need to print errmsg here as it should be printed inside of cmd_help
-				//RELEASE no need to print this in release version
-				fprintf(stderr, "Basic help mode err: %d\n", help_ret);
-				return EXIT_FAILURE;
-			}
+			print_basichelp(1); //1 for isoption == true
 			return EXIT_SUCCESS;
 		}
 	case intermode_c:

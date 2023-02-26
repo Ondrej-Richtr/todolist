@@ -163,7 +163,7 @@ int generate_entry_from_string(const char* string, todo_entry_t *entry)
 int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size_t, size_t, size_t))
 {	//reads indices (or ranges) from given string and performs 'func' on entries from llist under such indices
 	//indices (or ranges) must be specified in ascending order, otherwise they will be ignored
-	//func should return negative number when error and non-negative number of deleted entries
+	//'func' should return negative number when error and non-negative number of deleted entries
 	//this function returns non-zero and prints errmsg when error
 	if (!list || !string || !func)
 	{
@@ -175,7 +175,6 @@ int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size
 	int func_ret = 0, num_ret = 0, no_err = 1; //no_err is flag (0=false, 1=true)
 	const char *range_end = NULL;
 	
-	//TODO check somehow if there's other text than indices and whitespace/separator
 	while (string[index] != '\0')
 	{
 		//repetitive skipping to the next number to load
@@ -184,7 +183,6 @@ int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size
 
 		if (!parse_range_const(string + index, &start, &end, &range_end)) //it is a range
 		{
-			//printf("Range end pointer: '%s'\n", range_end);
 			index = range_end - string;
 		}
 		else //not a range
@@ -197,7 +195,7 @@ int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size
 				while (string[index] && !isseparator(string[index]) && !isspace(string[index])) index++;
 				fprintf(stderr, "Err: Wrong index format, it can't be a negaitve number or a text!\n");
 				no_err = 0; //err happened
-				continue;
+				break;
 			}
 			start = end = (size_t)num_ret;
 		}
@@ -209,7 +207,7 @@ int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size
 			else if (!start) fprintf(stderr, "Err: Wrong index specified, it can't be zero!\n");
 			else fprintf(stderr, "Err: Wrong index/range '%u', indices must be written in ascending order!\n", start);
 			no_err = 0; //err happened
-			continue;
+			break;
 		}
 		
 		//there we calculate actual index from visual index (by -deleted-1)
@@ -225,10 +223,17 @@ int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size
 		
 	}
 
-	if (!end && no_err) //we print err when no other err happened and there was no successful func call
+	if (!no_err)
+	{
+		if (!last) fprintf(stderr, "Because of previous error there were no changes made.\n");
+		else fprintf(stderr, "Because of previous error changes stopped at index '%lu'.\n", last);
+		return 1;
+	}
+
+	if (!last) //we print err when no other err happened and there was no successful func call
 	{
 		fprintf(stderr, "Err: Bad formating in current command! No changes were made.\n");
-		//maybe here return something non-negative?
+		return 2; //maybe shouldn't return err code?
 	}
 	
 	return 0;
@@ -283,7 +288,7 @@ int cmd_print(llist *list, char *data_buffer)
 {	//prints llist in specified style parsed from data_buffer
 	//if no style parsed it prints in PRINT_DEFAULT (macro) style
 	//when error it prints errmsg and returns nonzero
-	if (!list)
+	if (!list || !data_buffer)
 	{
 		//TODO probably bad as the interactive while loops continues
 		fprintf(stderr, "Err: Program passed NULL pointer into print command! Ignoring this command...\n");
@@ -432,34 +437,43 @@ int cmd_mark(llist *list, const char *data_buffer)
 	
 	while (*data_buffer && isspace((int)*data_buffer)) data_buffer++; //skipping initial whitespaces
 	
-	//TODO all_c is not working currently (should it even be allowed here?)
 	enum SpecType spec = all_c;
 	char spec_buffer[CLI_LINE_MAX_LEN + 1] = { 0 };
 	size_t spec_size = copy_until_delimiter(CLI_LINE_MAX_LEN, spec_buffer, data_buffer, isspace);	
-	
-	if (parse_specifier_type((char*)&spec_buffer, &spec) && spec != all_c) //specifier was specified and is not all_c
+
+	if (!parse_specifier_type((char*)spec_buffer, &spec) || spec == all_c)
 	{
-		//skipping to the start of non-specifier in data_buffer
-		while (data_buffer[spec_size] && isspace((int)data_buffer[spec_size])) spec_size++;
-		
-		if (data_buffer[spec_size] == '\0') //data is empty (no indices)
-		{
-			fprintf(stderr, "Err: You need to specify indices for marking as done/undone!\n");
-			return 1;
-		}
-		
-		switch (spec)
-		{
-			case done_c: return llist_asc_index_map(list, data_buffer + spec_size, mark_range_done);
-			case undone_c: return llist_asc_index_map(list, data_buffer + spec_size, mark_range_undone);
-		}
-		//this should not happen (for now):
-		fprintf(stderr, "Err: Unsupported specifier '%s' in mark command!\n", (char*)spec_buffer);
+		//done/undone is not specified so there is nothing to do?
+		fprintf(stderr, "Err: You need to specify if mark as done or undone!\n");
 		return 1;
 	}
-	//done/undone is not specified so there is nothing to do?
-	fprintf(stderr, "Err: You need to specify if mark as done or undone!\n");
-	return 1;
+	
+	//skipping to the start of non-specifier in data_buffer
+	data_buffer += spec_size;
+	while (*data_buffer && isspace((int)*data_buffer)) data_buffer++;
+		
+	if (!*data_buffer) //data is empty (no indices)
+	{
+		fprintf(stderr, "Err: You need to specify indices for marking as done/undone!\n");
+		return 2;
+	}
+	
+	switch (spec)
+	{
+	case done_c:
+		//possible err printed in llist_asc_index_map already
+		if (llist_asc_index_map(list, data_buffer, mark_range_done)) return 3;
+		break;
+	case undone_c:
+		//possible err printed in llist_asc_index_map already
+		if (llist_asc_index_map(list, data_buffer, mark_range_undone)) return 3;
+		break;
+	default: //this should not happen (for now):
+		fprintf(stderr, "Err: Unsupported specifier '%s' in mark command!\n", (char*)spec_buffer);
+		return 4;
+	}
+	
+	return 0;
 }
 
 int cmd_clear(llist *list, char *data_buffer)
@@ -696,7 +710,15 @@ void print_basichelp(int isoption)
 {	//just prints basic help for interactive mode or help mode (when isoption == true)
 	if (isoption) //TODO implement isoption version
 	{
-		printf("Basic help for --help is not implemented yet!\n");
+		//TODO make this proper
+		puts("Usage:   todo [options] [command]");
+		puts("         todo [options] [-e command]");
+		puts("Example: todo -f ./path/to/myfile 'print 5'");
+		puts("         todo -e 'sort deadline' -e print");
+		puts("Options:");
+		puts("  -f <FILE>\tUse todo file at location FILE.");
+		puts("  -h,  --help\tPrints this help.");
+		
 		return;
 	}
 	
@@ -716,46 +738,8 @@ void print_basichelp(int isoption)
 	puts("-----------------------------------------");
 }
 
-int cmd_help(char *data_buffer, int isoption)
-{	//help command, prints basic help for interactive mode and -h/--help option mode (when isoption)
-	//or it prints help for specific command when specified (long help when isoption)
-	//when error it prints errmsg and returns nonzero
-	if (!data_buffer)
-	{
-		//TODO probably bad as the interactive while loops continues
-		fprintf(stderr, "Err: Program passed NULL pointer into help command! Ignoring this command...\n");
-		return -1;
-	}
-	
-	//skipping the initial whitespaces
-	size_t start_offset = 0;
-	while (data_buffer[start_offset] && isspace((int)data_buffer[start_offset])) start_offset++;
-	data_buffer += start_offset;
-	
-	if (!*data_buffer)
-	{
-		if (isoption && start_offset) //checks whether '--help=CMD' got whitespace CMD argument
-		{
-			fprintf(stderr, "Err: Bad syntax for '--help=CMD' option, the CMD argument was empty!\n");
-			return 1;
-		}
-		//prints basic help for empty/whitespace cmd in inter. mode and empty cmd in non-inter mode
-		print_basichelp(isoption);
-		return 0;
-	}
-	
-	//TODO process the data_tail aswell
-	//skips to the end of possible cmd word
-	char *data_tail = next_word_skip(data_buffer); //data_tail is ignored
-	
-	enum CmdType cmd = help_c; //placeholder
-	if (!parse_cmd_type(data_buffer, &cmd))
-	{
-		if (isoption) fprintf(stderr, "Err: Unknown command: '%s'! Use '-h' or '--help' option to get the list of all possible commands.\n", data_buffer);
-		else fprintf(stderr, "Err: Unknown command: '%s'! Type 'help' to get the list of all possible commands.\n", data_buffer);
-		return 2;
-	}
-	
+void print_commandhelp(enum CmdType cmd, const char* cmd_str, int isoption) //isoption is now ignored
+{	//print help text for specified command
 	//TODO update this, cmds are now always single line, also update delete, mark for ranges, non-inter mode
 	switch(cmd)
 	{
@@ -815,8 +799,52 @@ int cmd_help(char *data_buffer, int isoption)
 		puts("Example - 'sort text' or 'sort deadline undone' (this is almost the same as 'sort deadline' followed by 'sort undone')");
 		break;
 	default:
-		printf("Help for command: '%s' is not implemented yet or something wrong happened!\n", data_buffer);
+		printf("Help for command: '%s' is not implemented yet or something wrong happened!\n", cmd_str);
 		break;
+	}
+}
+
+int cmd_help(char *data_buffer, int isoption)
+{	//help command, prints basic help for interactive mode and -h/--help option mode (when isoption)
+	//or it prints help for specific command when specified (long help when isoption)
+	//when error it prints errmsg and returns nonzero
+	if (!data_buffer)
+	{
+		//TODO probably bad as the interactive while loops continues
+		fprintf(stderr, "Err: Program passed NULL pointer into help command! Ignoring this command...\n");
+		return -1;
+	}
+	
+	//skipping the initial whitespaces
+	while (*data_buffer && isspace((int)*data_buffer)) data_buffer++;
+	
+	if (!*data_buffer)
+	{
+		print_basichelp(isoption);
+		return 0;
+	}
+	
+	int first = 1;
+	//TODO check this
+	while (*data_buffer)
+	{
+		//skips to the end of possible cmd word
+		char *data_tail = next_word_skip(data_buffer);
+		
+		enum CmdType cmd = help_c; //placeholder
+		if (!parse_cmd_type(data_buffer, &cmd))
+		{
+			if (isoption) fprintf(stderr, "Err: Unknown command: '%s'! Use '-h' or '--help' option to get the list of all possible commands.\n", data_buffer);
+			else fprintf(stderr, "Err: Unknown command: '%s'! Type 'help' to get the list of all possible commands.\n", data_buffer);
+			return 2;
+		}
+		
+		//splitting helps with newline for better readibility
+		if (first) first = 0;
+		else putchar('\n');
+
+		print_commandhelp(cmd, data_buffer, isoption);
+		data_buffer = data_tail; //while loops continues from the data_til
 	}
 	
 	return 0;
@@ -1010,15 +1038,15 @@ int do_noninter_cmd(llist *list, enum CmdType type, const char *data)
 	returns non-zero if the command couldn't be executed successfuly*/
 	
 	//maximum of characters that are taken into account from data string
-	char buffer[CLI_LINE_MAX_LEN + 1] = { 0 }, *buffer_ptr = (char*)&buffer;
+	char buffer[CLI_LINE_MAX_LEN + 1] = { 0 }, *buffer_ptr = (char*)buffer;
 	//making copy so commands can modify the string
 	strncpy(buffer_ptr, data, CLI_LINE_MAX_LEN);
-
+	
 	switch (type)
 	{
 		case help_c:
 		{
-			fprintf(stderr, "Err: Help command is not implemented in non-interactive mode! Use option '--help' or help in interactive mode.\n");
+			fprintf(stderr, "Err: Help command is not implemented in non-interactive mode! Use options '-h', --help' or help in interactive mode.\n");
 			return 2;
 		}
 		case print_c: return cmd_print(list, buffer_ptr);
@@ -1027,14 +1055,11 @@ int do_noninter_cmd(llist *list, enum CmdType type, const char *data)
 		case mark_c: return cmd_mark(list, buffer_ptr);
 		case clear_c: return cmd_clear(list, buffer_ptr);
 		case change_c: return cmd_change(list, buffer_ptr, 0, 1); //0 for not verbose, 1 for noninteractive mode
-			//fprintf(stderr, "Err: Change command is currently disabled in non-interactive mode!\n");
-			return 0;
 		case move_c: return cmd_move(list, buffer_ptr);
 		case swap_c: return cmd_swap(list, buffer_ptr);
 		case sort_c: return cmd_sort(list, buffer_ptr);
-		default: //this shouldn't normally happen
+		default: //this should get checked already in parse_options
 			fprintf(stderr, "Err: Unimplemented command type '%d'!\n", type);
-			//fprintf(stderr, "Err: Wrong command type specified '%d' in command caller!\n", type);
 		return 1;
 	}
 	return 0; //should not happen at this point
@@ -1122,6 +1147,7 @@ int parse_specifier_type(char *string, enum SpecType *spec_ptr)
 		if (spec_ptr) *spec_ptr = undone_c;
 	}
 	else return 0;
+	
 	return 1;
 }
 
@@ -1146,17 +1172,17 @@ int parse_cmd_type(const char *cmd, enum CmdType *type_ptr)
 
 int is_valid_cmd(const char *str, enum CmdType *type)
 {	//returns nonzero when str contains at the beginning valid command
-	size_t offset = 0;
-	char str_copy[CMD_NAME_MAX_LEN + 1] = { 0 }, *copy_ptr = (char*)&str_copy; //+1 for term. char.
+	//ignores initial whitespaces, assumes that 'str' is a valid non-NULL string
+	char str_copy[CMD_NAME_MAX_LEN + 1] = { 0 }, *copy_ptr = (char*)str_copy; //+1 for term. char.
 
-	//TODO test this
 	//skipping initial whitespaces of the input
-	while (str[offset] && isspace((int)str[offset])) offset++;
+	while (*str && isspace((int)*str)) str++;
 	
-	strncpy(copy_ptr, str + offset, CMD_NAME_MAX_LEN); //let's hope the upper bound works
+	strncpy(copy_ptr, str, CMD_NAME_MAX_LEN); //let's hope the upper bound works
 	
 	//while (*copy_ptr && isspace((int)*copy_ptr)) copy_ptr++; //skipping initial whitespaces
 	char *cmd_end = word_skip(copy_ptr); //shouldnt return NULL
+	//TODO probably dont split
 	*cmd_end = '\0'; //slicing cmd name away from the possible rest
 	
 	enum  CmdType tmp; //throwaway variable (parse_cmd_type does not take NULL)
@@ -1169,30 +1195,17 @@ int inter_cmd(FILE *input, llist *list, char buffer[CLI_LINE_MAX_LEN + 1])
 	returns 1 if wrong command or other non-zero if error*/
 	buffer[CLI_LINE_MAX_LEN] = '\0'; //_security reasons_TM
 	char *cmd_ptr = (char*)buffer; //TODO check all (char*)& converions!
-	//size_t index = 0, cmd_end = 0;
 	
 	//skipping initial whitespaces
 	while (*cmd_ptr && isspace((int)*cmd_ptr)) cmd_ptr++;
-	//while (buffer[index] && isspace((int)buffer[index])) index++;
 	
-	//TODO
+	//splitting cmd and tail - they both shouldnt have initial whitespaces now
 	char* tail_ptr = next_word_skip(cmd_ptr);
-	
-	//skipping to the end of the first word (if there is one)
-	//while (buffer[index] && !isspace((int)buffer[index])) index++;
-	//cmd_end = index;
-	
-	//skipping whitespaces
-	//while (buffer[index] && isspace(buffer[index])) index++;
-	
-	//buffer[cmd_end] = '\0'; //splitting command string from the rest
-	
-	//TODO change to is_valid_cmp - maybe not needed?
+		
 	enum CmdType type;
-	//is_valid_cmd((char*)&buffer, &type);
 	if (!parse_cmd_type(cmd_ptr, &type))
 	{
-		fprintf(stderr, "Err: Unknown command: '%s'! Type 'help' to get list of all known commands.\n", cmd_ptr);
+		fprintf(stderr, "Err: Unknown command: '%s'! Type 'help' to get the list of all possible commands.\n", cmd_ptr);
 		return 1;
 	}
 	
@@ -1246,6 +1259,8 @@ int interactive_mode(FILE *input, const char *todo_file_path)
 
 int noninter_cmd(llist *list, const char *str)
 {
+	while (*str && isspace((int)*str)) str++; //skipping initial whitespaces
+	
 	enum CmdType type;
 	if (!is_valid_cmd(str, &type))
 	{
@@ -1254,7 +1269,7 @@ int noninter_cmd(llist *list, const char *str)
 		return 1;
 	}
 	
-	const char *data = word_skip_const(str);
+	const char *data = word_skip_const(str); //skipping after the command part
 	
 	if (do_noninter_cmd(list, type, data)) return 2; //err msg printed inside of cmds
 	return 0;

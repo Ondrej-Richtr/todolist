@@ -180,6 +180,8 @@ void print_todoentry(FILE *out, const todo_entry_t entry, const int style);
 
 void print_todolist(const llist *list, const int style);
 
+void print_basichelp(int isoption);
+
 int cmd_print(llist *list, char *data_buffer);
 
 int cmd_add(llist *list, char *data_buffer);
