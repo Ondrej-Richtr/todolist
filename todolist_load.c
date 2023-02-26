@@ -23,9 +23,9 @@ void skip_until(FILE *f, int *in_char, char until)
 }
 
 size_t copy_until_delimiter(size_t max_size, char buffer[max_size + 1], const char* source, int(*delim)(int))
-{	/*copies from source as much characters until delim. function returns true
-	or it reaches max size or end of source
-	puts null char at the end of loaded buffer, similar to srcpy_buffer*/
+{	//copies from source as much characters until delim. function returns true
+	//or it reaches max size or end of source
+	//puts null char at the end of loaded buffer, similar to srcpy_buffer
 	if (!source) return 0;
 	
 	size_t index = 0;
@@ -72,10 +72,10 @@ const char* word_skip_const(const char *string)
 }
 
 size_t readline(FILE *f, size_t max_size, char buffer[max_size + 1])
-{	/*reads single line from 'f' until newline char or EOF,
-	if the input is larger than buffer it ONLY stops storing it (unlike load_buffer),
-	puts null character in buffer at the end of loaded string
-	return number of characters loaded (excluding null char)*/
+{	//reads single line from 'f' until newline char or EOF,
+	//if the input is larger than buffer it ONLY stops storing it,
+	//puts null character in buffer at the end of loaded string
+	//return number of characters loaded (excluding null char)
 	if (!f) return 0;
 	
 	int c;
@@ -83,6 +83,7 @@ size_t readline(FILE *f, size_t max_size, char buffer[max_size + 1])
 	
 	while ((c = fgetc(f)) != EOF && c != '\n')
 	{
+		//index++ must happen only if it is under the boundary
 		if (index < max_size) buffer[index++] = (char)c;
 	}
 	
@@ -91,8 +92,8 @@ size_t readline(FILE *f, size_t max_size, char buffer[max_size + 1])
 }
 
 void skip_comment_blank_lines(FILE *f, int *in_char)
-{	/*only works if in_char is '#' or '\n'
-	skips to the beginning of the next non-comment non-empty line or EOF*/
+{	//only works if in_char is '#' or '\n'
+	//skips to the beginning of the next non-comment non-empty line or EOF
 	while (*in_char != EOF && ((char)*in_char == '#' || (char)*in_char == '\n'))
 	{
 		skip_until(f, in_char, '\n');
@@ -130,8 +131,8 @@ int str_to_num(const char *string, size_t *end_index)
 }
 
 size_t load_num_8(FILE *f, uint_least8_t* num, int *in_char) //8 bit version
-{	/*expects first (given) character to be already number (digit)
-	only works with unsigned numbers, returns numbers of digits that it read*/
+{	//expects first (given) character to be already number (digit)
+	//only works with unsigned numbers, returns numbers of digits that it read
 	if (!f || !num || !in_char) return 0;
 	
 	int c = *in_char;
@@ -150,8 +151,8 @@ size_t load_num_8(FILE *f, uint_least8_t* num, int *in_char) //8 bit version
 }
 
 size_t load_num_16(FILE *f, uint_least16_t* num, int *in_char) //16 bit version
-{	/*expects first (given) character to be already number (digit)
-	only works with unsigned numbers, returns numbers of digits that it read*/
+{	//expects first (given) character to be already number (digit)
+	//only works with unsigned numbers, returns numbers of digits that it read
 	if (!f || !num || !in_char) return 0;
 	
 	int c = *in_char;
@@ -189,7 +190,8 @@ int load_num_tolerant_16(FILE *f, uint_least16_t* num, int *in_char) //16 bit ve
 	return load_num_16(f, num, in_char);
 }
 
-char* string_num_end(char *num_start, char **new_start) //TODO is this useless now?
+//USELESS
+/*char* string_num_end(char *num_start, char **new_start)
 {	//find first number in given string 'num_start' and returns where this number ends
 	//if new_start is not NULL then stores start of this number there
 	if (!num_start) return NULL;
@@ -200,7 +202,7 @@ char* string_num_end(char *num_start, char **new_start) //TODO is this useless n
 	
 	while (*num_start != '\0' && isdigit((int)*num_start)) num_start++;
 	return num_start;
-}
+}*/
 
 int load_date(FILE *f, date_t *d, int c)
 {	//loads from stream 'f' date to given 'd', first char given as 'c'
@@ -216,7 +218,7 @@ int load_date(FILE *f, date_t *d, int c)
 	return 0;
 }
 
-int load_date_string(date_t *d, char *str)
+int load_date_string(date_t *d, const char *str)
 {	//loads date from given string, returns non-null if not all numbers were loaded
 	//IDEA maybe add checks whether we load exactly 3 numbers (zeroes included)
 	if (!d || !str) return -1;
@@ -243,10 +245,11 @@ int load_date_string(date_t *d, char *str)
 	return 0;
 }
 
-size_t load_buffer(FILE *f, char buffer[TEXT_MAX_LEN], int *in_char) //TODO probably useless - readline is better
-{	/*loads text from file into buffer, until it reaches max size or newline or EOF
-	returns amount of characters loaded, 0 also when given invalid input
-	if given non-NULL in_char then it takes that char as first character and returns last char there*/
+//USELESS
+/*size_t load_buffer(FILE *f, char buffer[TEXT_MAX_LEN], int *in_char)
+{	//loads text from file into buffer, until it reaches max size or newline or EOF
+	//returns amount of characters loaded, 0 also when given invalid input
+	//if given non-NULL in_char then it takes that char as first character and returns last char there
 	if (!f || !buffer) return 0;
 	
 	size_t count = 0;
@@ -262,7 +265,7 @@ size_t load_buffer(FILE *f, char buffer[TEXT_MAX_LEN], int *in_char) //TODO prob
 	
 	if (in_char != NULL)*in_char = c;
 	return count;
-}
+}*/
 
 void strcpy_buffer(size_t buffer_size, char *buffer, const char *source)
 {	//copies content of source string into buffer of given size + 1 (null char)
@@ -279,8 +282,8 @@ void strcpy_buffer(size_t buffer_size, char *buffer, const char *source)
 }
 
 int load_one_entry(FILE *f, todo_entry_t *entry)
-{	/*loads entry from given file, ignores commented lines (starting with '#')
-	returns 0 if success, -1 if it reached the EOF, otherwise positive number*/
+{	//loads entry from given file, ignores commented lines (starting with '#')
+	//returns 0 if success, -1 if it reached the EOF, otherwise positive number
 	if (!f || !entry) return 1;
 	
 	int c = fgetc(f);
@@ -303,16 +306,10 @@ int load_one_entry(FILE *f, todo_entry_t *entry)
 	if (load_date(f, &entry->created_date, c)) return 4;
 	
 	while (isseparator(c = fgetc(f))); //skipping separators
-	size_t size = load_buffer(f, (char*)&entry->text_buffer, &c);
-	
-	//this should be always possible as the length of buffer is TEXT_MAX_SIZE + 1
-	entry->text_buffer[size] = '\0';
-	
-	/*printf("Test buffer: '%s'\n", (char*)entry->text_buffer);
-	for (size_t i = 0; i < size; i++) printf("%d ", (int)entry->text_buffer[i]);
-	putchar('\n');*/
-	
-	if (c != '\n') skip_until(f, &c, '\n'); //skips to end of line or EOF
+
+	if (ungetc(c, f) == EOF) return 5;
+	//UNSURE do something with size
+	size_t size = readline(f, TEXT_MAX_LEN, (char*)entry->text_buffer);
 	
 	return 0;
 }
@@ -329,6 +326,7 @@ int load_entries(llist *list, const char *path)
 		
 	todo_entry_t *entry = NULL;
 	int status = 0;
+	size_t index = 1; //entry indexing starts from 1
 	
 	while (!status)
 	{
@@ -344,8 +342,7 @@ int load_entries(llist *list, const char *path)
 		
 		if ((status = load_one_entry(f, entry)) > 0)
 		{	//positive return value means something went wrong
-			//IDEA maybe print on which index was the corrupted entry
-			fprintf(stderr, "Err: Loading of a entry failed!");
+			fprintf(stderr, "Err: Loading of a entry '%lu' failed!", index);
 			switch (status)
 			{
 			case 2:
@@ -356,6 +353,9 @@ int load_entries(llist *list, const char *path)
 				break;
 			case 4:
 				fprintf(stderr, " -> Failure of loading created date.\n");
+				break;
+			case 5: //when ungetc fails
+				fprintf(stderr, " -> Failure of character pushback.\n");
 				break;
 			//those shouldnt normally happen
 			case 1:
@@ -381,6 +381,8 @@ int load_entries(llist *list, const char *path)
 			fclose(f);
 			return 4;
 		}
+		
+		index++;
 	}
 	
 	fclose(f);

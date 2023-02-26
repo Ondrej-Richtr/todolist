@@ -21,7 +21,7 @@ int parse_opt_basichelp(const char *str)
 	size_t helpstr_len = sizeof(helpstr)/sizeof(char) - 1; //-1 as we dont count term.char.	
 	
 	if (!strcmp("-h", str)) return 1; //str is '-h'
-	if (strncmp((char*)&helpstr, str, helpstr_len)) return 0; //str does not start with '--help'
+	if (strncmp((char*)helpstr, str, helpstr_len)) return 0; //str does not start with '--help'
 
 	return str[helpstr_len] ? -1 : 2; //checks if it is more than just '--help'
 }
@@ -33,7 +33,7 @@ int parse_opt_cmdhelp(const char *str)
 	const char cmdhelpstr[] = "--help=";
 	size_t cmdhelpstr_len = sizeof(cmdhelpstr)/sizeof(char) - 1; //-1 as we dont count term.char.	
 	
-	if (strncmp((char*)&cmdhelpstr, str, cmdhelpstr_len)) return 0; //does not start with '--help='
+	if (strncmp((char*)cmdhelpstr, str, cmdhelpstr_len)) return 0; //does not start with '--help='
 	
 	size_t index = cmdhelpstr_len;
 	while (str[index] && isspace((int)str[index])) index++; //skipping whitespaces
@@ -169,7 +169,8 @@ int main(int argc, char **argv)
 	case helpmode_c:
 		{
 			int help_ret = cmd_help_noninter_parse((size_t)argc, (const char**)argv);
-			fprintf(stderr, "Command help mode err: %d\n", help_ret); //RELEASE no need to print this in release version
+			//RELEASE no need to print this in release version
+			fprintf(stderr, "Command help mode err: %d\n", help_ret);
 			return EXIT_SUCCESS;
 		}
 	case basichelpmode_c:

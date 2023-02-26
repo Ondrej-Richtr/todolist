@@ -31,15 +31,15 @@ int write_one_entry(FILE *f, todo_entry_t *entry)
 	fputc('|', f);
 	if (write_date(f, entry->created_date) < 0) return 3;
 	fputc('|', f);
-	write_buffer(f, (char*)&entry->text_buffer);
+	write_buffer(f, (char*)entry->text_buffer);
 	fputc('\n', f);
 	
 	return 0;
 }
 
 int write_entries(FILE *f, llist *list)
-{	/*writes entries from linked list into given file
-	returns non-zero if error and prints err msg*/
+{	//writes entries from linked list into given file
+	//returns non-zero if error and prints err msg
 	//if (!f || !list) return -1; //useless probably
 	int err_write = 0;
 	

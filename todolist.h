@@ -122,13 +122,13 @@ int load_num_tolerant_8(FILE *f, uint_least8_t* num, int *in_char);
 
 int load_num_tolerant_16(FILE *f, uint_least16_t* num, int *in_char);
 
-char* string_num_end(char *num_start, char **new_start);
+//char* string_num_end(char *num_start, char **new_start); //USELESS
 
 int load_date(FILE *f, date_t* d, int c);
 
-int load_date_string(date_t *d, char *str_start);
+int load_date_string(date_t *d, const char *str_start);
 
-//size_t load_buffer(FILE *f, char buffer[TEXT_MAX_LEN], int *in_char);
+//size_t load_buffer(FILE *f, char buffer[TEXT_MAX_LEN], int *in_char); //USELESS
 
 void strcpy_buffer(size_t buffer_size, char *buffer, const char *source);
 

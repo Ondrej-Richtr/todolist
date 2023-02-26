@@ -32,9 +32,9 @@ date_t get_current_date()
 
 //comparators for todo_entry_t
 //expecting non-NULL pointers, used as func.pointers -> no point in making them inline
-/*	if entries are same comparator returns 0
-	if first entry is 'greater' it retruns negative number
-	if first entry is 'smaller' it returns positive number*/
+//	if entries are same comparator returns 0
+//	if first entry is 'greater' it retruns negative number
+//	if first entry is 'smaller' it returns positive number
 int todo_compar_statdone(const todo_entry_t *e1, const todo_entry_t *e2)
 {
 	//this assumess that status done is always same positive number and undone always zero
@@ -76,44 +76,15 @@ int todo_compar_text(const todo_entry_t *e1, const todo_entry_t *e2)
 	return strcmp((char*)e2->text_buffer, (char*)e1->text_buffer);
 }
 
-//cli funcionality
-int generate_entry_splitted(todo_entry_t *entry, const char status, const date_t orig_date, char *dead_date)
-{	/*fills entry attributes specified by other parameters, EXCLUDING the text!
-	returns zero if success, -1 if NULL entry and non-zero if error*/
-	
-	//TODO maybe this function should be inlined into generate_entry_from_string
-	if (!entry)
-	{
-		fprintf(stderr, "Err: NULL pointer passed into generating of new entry! Entry aborted\n");
-		return -1;
-	}
-	
-	if (!dead_date || !*dead_date) date_null(&entry->deadline);
-	else if (load_date_string(&entry->deadline, dead_date))
-	{
-		fprintf(stderr, "Err: Wrong formating of date '%s' entered! Entry aborted\n", dead_date);
-		return 1;
-	}
-	
-	//no error should happen over there: (so we set status now)
-	entry->status = 0;
-	if (status == 'X') entry->status = 1;
-	
-	entry->created_date = orig_date;
-	
-	return 0;
-}
-
+//cli functionality
 int generate_entry_from_string(const char* string, todo_entry_t *entry)
-{	/*fills todo_entry according to given C-style string
-	the string should be in format: [STATUS|][DEADLINE|]TEXT; STATUS and DEADLINE are optional
-	'|' is separator, there needs to be atleast one between each of STATUS, DEADLINE, TEXT
-	returns zero if success, -1 if bad parameters and positive ints if error when parsing*/
+{	//fills todo_entry according to given C-style string
+	//the string should be in format: [STATUS|][DEADLINE|]TEXT; STATUS and DEADLINE are optional
+	//'|' is separator, there needs to be atleast one between each of STATUS, DEADLINE, TEXT.
+	//returns zero if success, -1 if bad parameters and positive ints if error when parsing
 	if (!string || !entry) return -1;
 	
 	size_t index = 0;
-	//buffer for deadline number (could be static, but I chose it not to be for now)
-	char num_buffer[NUM_BUFFER_SIZE + 1] = { 0 };
 	
 	//first letter is checked if it's status
 	entry->status = 0;
@@ -124,27 +95,21 @@ int generate_entry_from_string(const char* string, todo_entry_t *entry)
 	}
 	
 	//skipping separators and spaces
-	while (string[index] != '\0' &&
-		(isspace(string[index]) || isseparator(string[index]))) index++;
+	while (string[index] &&
+	 (isspace((int)string[index]) || isseparator((int)string[index]))) index++;
 
 	//loading deadline
-	if (isdigit(string[index]))
+	if (!isdigit((int)string[index])) date_null(&entry->deadline);
+	else 
 	{
-		//this also puts term. char. at the end:
-		index += copy_until_delimiter(NUM_BUFFER_SIZE, num_buffer, string + index, isseparator);
-		//TODO move load date string here
-	}
-	else
-	{
-		num_buffer[0] = '\0';
-		date_null(&entry->deadline); //putting zeroed date into entry
-	}
-	
-	if (num_buffer[0] == '\0') date_null(&entry->deadline);
-	else if (load_date_string(&entry->deadline, (char*)num_buffer))
-	{
-		fprintf(stderr, "Err: Wrong formating of date '%s' entered! Entry aborted\n", (char*)num_buffer);
-		return 1;
+		if (load_date_string(&entry->deadline, string + index))
+		{
+			fprintf(stderr, "Err: Wrong formating of date entered! Entry aborted.\n");
+			return 1;
+		}
+		
+		//date was loaded, skipping until text 
+		while (string[index] && !isseparator((int)string[index])) index++;
 	}
 	
 	//loading text
@@ -269,12 +234,12 @@ void print_todoentry(FILE *out, const todo_entry_t entry, const int style)
 }
 
 void print_todolist(const llist *list, const int style)
-{	/*	style 0 - just the entry text
-		style 1 - entry text, done/undone
-		style 2 - entry text, done/undone, valid deadlines
-		style 3 - entry text, done/undone, valid deadlines, index (from 1)
-		style 4 - entry text, done/undone, all deadlines, index
-		style 5 - entry text, done/undone, all deadlines, all created date, index*/
+{	//	style 0 - just the entry text
+	//	style 1 - entry text, done/undone
+	//	style 2 - entry text, done/undone, valid deadlines
+	//	style 3 - entry text, done/undone, valid deadlines, index (from 1)
+	//	style 4 - entry text, done/undone, all deadlines, index
+	//	style 5 - entry text, done/undone, all deadlines, all created date, index
 	size_t num = 1;
 	for (struct node *n = list->first; n != NULL; n = n->next)
 	{
@@ -579,7 +544,7 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose, int noninter)
 			if (is_verbose) puts("Entry was left unchanged.");
 			return 0;
 		}
-		entry_str = (char*)&line_buffer;
+		entry_str = (char*)line_buffer;
 	}
 	
 	todo_entry_t new_entry;
@@ -825,7 +790,6 @@ int cmd_help(char *data_buffer, int isoption)
 	}
 	
 	int first = 1;
-	//TODO check this
 	while (*data_buffer)
 	{
 		//skips to the end of possible cmd word
@@ -893,7 +857,7 @@ int cmd_help_noninter_parse(size_t argc, const char** argv)
 		//handling of "--help=CMD" where CMD is nontrivial (nonempty with atleast one non-whitespace char)
 		//whitespaces get copied too (but cmd_help will ignore them)
 		size_t cmdhelpstr_len = sizeof("--help=")/sizeof(char) - 1; //-1 as we dont count term.char.
-		strncpy((char*)&cmd_buffer, argv[i] + cmdhelpstr_len, CMD_NAME_MAX_LEN); //the rest of possible cmd string is ignored
+		strncpy((char*)cmd_buffer, argv[i] + cmdhelpstr_len, CMD_NAME_MAX_LEN); //the rest of possible cmd string is ignored
 		cmd_buffer[CMD_NAME_MAX_LEN] = '\0'; //just to be sure
 		
 		if (!cmd_buffer[0])
@@ -906,7 +870,7 @@ int cmd_help_noninter_parse(size_t argc, const char** argv)
 		if (longhelps_count) putchar('\n'); //sepparating helps for each cmd if there's more than one
 		
 		//UNSURE maybe dont return?
-		int ret = cmd_help((char*)&cmd_buffer, 1); //1 means that help was asked through options
+		int ret = cmd_help((char*)cmd_buffer, 1); //1 means that help was asked through options
 		if (ret == 1) return 3;		 //bad syntax for '--help=CMD', probably whitespace CMD argument
 		else if (ret == 2) return 4; //unknown cmd, err was already printed
 		else if (ret) return 5;		 //some unexpected err that shouldn't typically happen
@@ -917,7 +881,7 @@ int cmd_help_noninter_parse(size_t argc, const char** argv)
 	if (!longhelps_count)
 	{
 		fprintf(stderr, "Err: Unexpected error happened when resolving '--help=CMD' options!\n");
-		return 99; //TODO better number?
+		return 6;
 	}
 	
 	return 0;
@@ -1008,10 +972,10 @@ int cmd_sort(llist *list, char *data_buffer)
 }
 
 int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
-{	/*calls correct functionality specified by command type argument
-	passes in buffer if the function requires it
-	error msgs are printed by functions themselves, except for wrong type
-	returns non-zero if the command couldn't be executed successfuly*/
+{	//calls correct functionality specified by command type argument
+	//passes in buffer if the function requires it
+	//error msgs are printed by functions themselves, except for wrong type
+	//returns non-zero if the command couldn't be executed successfuly
 	switch (type)
 	{
 		case help_c: return cmd_help(buffer, 0); //0 for an interactive mode (1 is --help mode)
@@ -1033,9 +997,9 @@ int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 }
 
 int do_noninter_cmd(llist *list, enum CmdType type, const char *data)
-{	/*calls correct command specified by CmdType enum,
-	error msgs are printed by functions themselves, except for wrong type (which typically should not happen here)
-	returns non-zero if the command couldn't be executed successfuly*/
+{	//calls correct command specified by CmdType enum,
+	//error msgs are printed by functions themselves, except for wrong type (which typically should not happen here)
+	//returns non-zero if the command couldn't be executed successfuly
 	
 	//maximum of characters that are taken into account from data string
 	char buffer[CLI_LINE_MAX_LEN + 1] = { 0 }, *buffer_ptr = (char*)buffer;
@@ -1085,9 +1049,9 @@ int parse_direction(const char *string, size_t *end_index)
 }
 
 int parse_range(char *string, size_t *start, size_t *end, char **range_end)
-{	/*parses input from string in format "startnum-endnum"
-	ignores whitespaces at the start and other text after
-	returns non-zero if bounds not found*/
+{	//parses input from string in format "startnum-endnum"
+	//ignores whitespaces at the start and other text after
+	//returns non-zero if bounds not found
 	while (*string && isspace((int)*string)) string++; //skipping initial whitespaces
 	
 	size_t offset = 0;
@@ -1107,9 +1071,9 @@ int parse_range(char *string, size_t *start, size_t *end, char **range_end)
 	return 0;
 }
 int parse_range_const(const char *string, size_t *start, size_t *end, const char **range_end) //same as parse_range but with const char*
-{	/*parses input from string in format "startnum-endnum"
-	ignores whitespaces at the start and other text after
-	returns non-zero if bounds not found*/
+{	//parses input from string in format "startnum-endnum"
+	//ignores whitespaces at the start and other text after
+	//returns non-zero if bounds not found
 	while (*string && isspace(*string)) string++; //skipping initial whitespaces
 	
 	size_t offset = 0;
@@ -1182,7 +1146,7 @@ int is_valid_cmd(const char *str, enum CmdType *type)
 	
 	//while (*copy_ptr && isspace((int)*copy_ptr)) copy_ptr++; //skipping initial whitespaces
 	char *cmd_end = word_skip(copy_ptr); //shouldnt return NULL
-	//TODO probably dont split
+	//IDEA dont split and just check for first n letters
 	*cmd_end = '\0'; //slicing cmd name away from the possible rest
 	
 	enum  CmdType tmp; //throwaway variable (parse_cmd_type does not take NULL)
@@ -1190,11 +1154,11 @@ int is_valid_cmd(const char *str, enum CmdType *type)
 }
 
 int inter_cmd(FILE *input, llist *list, char buffer[CLI_LINE_MAX_LEN + 1])
-{	/*parses which command to be done from the buffer,
-	then executes correct cli function
-	returns 1 if wrong command or other non-zero if error*/
+{	//parses which command to be done from the buffer,
+	//then executes correct cli function
+	//returns 1 if wrong command or other non-zero if error
 	buffer[CLI_LINE_MAX_LEN] = '\0'; //_security reasons_TM
-	char *cmd_ptr = (char*)buffer; //TODO check all (char*)& converions!
+	char *cmd_ptr = (char*)buffer;
 	
 	//skipping initial whitespaces
 	while (*cmd_ptr && isspace((int)*cmd_ptr)) cmd_ptr++;
@@ -1215,9 +1179,9 @@ int inter_cmd(FILE *input, llist *list, char buffer[CLI_LINE_MAX_LEN + 1])
 }
 
 int interactive_mode(FILE *input, const char *todo_file_path)
-{	/*reads lines from input until EOF and interprets them as cli commands
-	todo_file is_path is the path to file where current todo list entries
-	are possibly stored and where the result will be written*/
+{	//eads lines from input until EOF and interprets them as cli commands
+	//todo_file is_path is the path to file where current todo list entries
+	//are possibly stored and where the result will be written
 	
 	llist list = { NULL, NULL };
 	if (load_entries(&list, todo_file_path))
@@ -1276,9 +1240,9 @@ int noninter_cmd(llist *list, const char *str)
 }
 
 int noninteractive_mode(const size_t options_num, const char **options, const char *todo_file_path)
-{	/*Handles the non-interactive commands from options arr, they must be specified after -e option
-	with exception when using single command - then it must be at the end of argv array
-	assumess options has options_num strings (NULLs shouldn't appear there), returns nonzero when error*/
+{	//Handles the non-interactive commands from options arr, they must be specified after -e option
+	//with exception when using single command - then it must be at the end of argv array
+	//assumess options has options_num strings (NULLs shouldn't appear there), returns nonzero when error
 	
 	llist list = { NULL, NULL };
 	if (load_entries(&list, todo_file_path))
