@@ -1,12 +1,13 @@
 #include "todolist.h"
 
 
-void write_buffer(FILE *f, char* buffer)
+//USELESS
+/*void write_buffer(FILE *f, const char* buffer)
 {	//writes buffer into file,
 	//buffer should have size smaller or equal as TEXT_MAX_LEN
 	for (size_t index = 0; index < TEXT_MAX_LEN && buffer[index]; index++)
 		fputc(buffer[index], f);
-}
+}*/
 
 int write_date(FILE *out, const date_t date)
 {	//prints given date into file 'out' in style: DAY MONTH YEAR
@@ -15,8 +16,9 @@ int write_date(FILE *out, const date_t date)
 }
 
 int write_one_entry(FILE *f, todo_entry_t *entry)
-{
-	if (!f || !entry) return 1;
+{	//writes given entry into given file, returns nonzero when err
+	//file ptr must be non-NULL!
+	if (!entry) return 1;
 	
 	switch (entry->status) //TODO maybe print an error when not 0 or 1?
 	{
@@ -31,7 +33,7 @@ int write_one_entry(FILE *f, todo_entry_t *entry)
 	fputc('|', f);
 	if (write_date(f, entry->created_date) < 0) return 3;
 	fputc('|', f);
-	write_buffer(f, (char*)entry->text_buffer);
+	fputs((char*)entry->text_buffer, f);
 	fputc('\n', f);
 	
 	return 0;
@@ -40,20 +42,19 @@ int write_one_entry(FILE *f, todo_entry_t *entry)
 int write_entries(FILE *f, llist *list)
 {	//writes entries from linked list into given file
 	//returns non-zero if error and prints err msg
-	//if (!f || !list) return -1; //useless probably
-	int err_write = 0;
+	//file and list points must be non-NULL!
 	
 	for (struct node *n = list->first; n != NULL; n = n->next)
 	{
-		if (err_write = write_one_entry(f, n->val))
-		{	//err_write value gets ignored
-			//same error message as in add_entry_splitted:
-			fprintf(stderr, "Err: Failed to write following entry into the todo file!\n");
-			fprintf(stderr, "The entry: ");
-			print_todoentry(stderr, *(n->val), 1);
-			fputc('\n', stderr);
-			return 1;
-		}
+		int write_err = write_one_entry(f, n->val);
+		if (!write_err) continue;
+		
+		//write_err value gets ignored
+		//same error message as in cmd_add:
+		fprintf(stderr, "Err: Failed to write following entry into the todo file!\nThe entry: ");
+		print_todoentry(stderr, *(n->val), 1);
+		fputc('\n', stderr);
+		return 1;
 	}
 	
 	return 0;

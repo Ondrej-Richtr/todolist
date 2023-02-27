@@ -372,7 +372,7 @@ int load_entries(llist *list, const char *path)
 		if (status == -1) free(entry);			//EOF -> entry gets deleted
 		else if (!llist_add_end(list, entry))	//Success -> entry gets added to list
 		{	//adding to list failed
-			//same error message as in add_entry_splitted:
+			//same error message as in cmd_add:
 			fprintf(stderr, "Err: Failed to add following entry into the list!\nThe entry: '");
 			print_todoentry(stderr, *entry, 0);
 			fputs("'\n", stderr);

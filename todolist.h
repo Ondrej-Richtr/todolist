@@ -137,7 +137,7 @@ int load_one_entry(FILE *f, todo_entry_t *entry);
 int load_entries(llist *list, const char *path);
 
 //todolist_write.c
-void write_buffer(FILE *f, char* buffer);
+//void write_buffer(FILE *f, const char* buffer); //USELESS
 
 int write_date(FILE *out, const date_t date);
 

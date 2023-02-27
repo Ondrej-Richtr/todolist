@@ -318,8 +318,7 @@ int cmd_add(llist *list, char *data_buffer)
 	
 	if (!llist_add_end(list, entry))
 	{
-		fprintf(stderr, "Err: Failed to add following entry into the list!\n");
-		fprintf(stderr, "The entry: ");
+		fprintf(stderr, "Err: Failed to add following entry into the list!\nThe entry: ");
 		print_todoentry(stderr, *entry, 0);
 		fputc('\n', stderr);
 		free(entry);
