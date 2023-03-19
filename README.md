@@ -1,5 +1,5 @@
 # todolist
-Terminal based TO-DO list
+Terminal based TO-DO list with both Interactive and Non-Interactive modes
 
 #### *Important: This repository is currently in rework, you (probably) should rather use some older release. Also note that following text and helps are incomplete and maybe even incorrect.*
 
