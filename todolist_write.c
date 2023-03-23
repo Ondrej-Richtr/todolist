@@ -15,16 +15,21 @@ int write_date(FILE *out, const date_t date)
 	//return 0;
 }
 
-int write_one_entry(FILE *f, todo_entry_t *entry)
+int write_one_entry(FILE *f, todo_entry *entry)
 {	//writes given entry into given file, returns nonzero when err
 	//file ptr must be non-NULL!
 	if (!entry) return 1;
 	
-	switch (entry->status) //TODO maybe print an error when not 0 or 1?
+	switch (entry->status)
 	{
-		case 0: fputc(' ', f);
+	case 0: fputc(' ', f);
 		break;
-		default: fputc('X', f);	//usually 1
+	default:
+		fprintf(stderr, "Warning: Status of a entry has unexpected value '%d'! Interpeting entry as done.\nThe entry: ", entry->status);
+		print_todoentry(stderr, *entry, 2);
+		fputc('\n', stderr);
+	case 1:
+		fputc('X', f);	//usually 1
 		break;
 	}
 	
@@ -52,7 +57,7 @@ int write_entries(FILE *f, llist *list)
 		//write_err value gets ignored
 		//same error message as in cmd_add:
 		fprintf(stderr, "Err: Failed to write following entry into the todo file!\nThe entry: ");
-		print_todoentry(stderr, *(n->val), 1);
+		print_todoentry(stderr, *(n->val), 2);
 		fputc('\n', stderr);
 		return 1;
 	}
@@ -85,6 +90,7 @@ int write_todofile(FILE *f, llist *list)
 	return 0;
 }
 
+//USELESS
 void write_prompt() //IDEA maybe inline this?
 {	//writes prompt into stdout
 	fputs("> ", stdout);

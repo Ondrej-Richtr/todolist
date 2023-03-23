@@ -281,7 +281,7 @@ void strcpy_buffer(size_t buffer_size, char *buffer, const char *source)
 	buffer[index] = '\0';
 }
 
-int load_one_entry(FILE *f, todo_entry_t *entry)
+int load_one_entry(FILE *f, todo_entry *entry)
 {	//loads entry from given file, ignores commented lines (starting with '#')
 	//returns 0 if success, -1 if it reached the EOF, otherwise positive number
 	if (!f || !entry) return 1;
@@ -324,17 +324,17 @@ int load_entries(llist *list, const char *path)
 		return 1;
 	}
 		
-	todo_entry_t *entry = NULL;
+	todo_entry *entry = NULL;
 	int status = 0;
 	size_t index = 1; //entry indexing starts from 1
 	
 	while (!status)
 	{
-		entry = calloc(1, sizeof(todo_entry_t)); //using calloc so the entry is nulled already
+		entry = calloc(1, sizeof(todo_entry)); //using calloc so the entry is nulled already
 		
 		if (entry == NULL)
 		{	//entry couldn't get allocated
-			fprintf(stderr, "Err: Couldn't allocate memory of %u bytes!\n", sizeof(todo_entry_t));
+			fprintf(stderr, "Err: Couldn't allocate memory of %u bytes!\n", sizeof(todo_entry));
 			llist_destroy_contents(list);
 			fclose(f);
 			return 2;

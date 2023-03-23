@@ -38,9 +38,9 @@ typedef struct
 	date_t 	created_date;				//date of creation (currently date of last modification)
 	date_t deadline;					//deadline for this entry
 	char text_buffer[TEXT_MAX_LEN + 1];	//description of entry, +1 for NULL char
-} todo_entry_t;
+} todo_entry;
 
-inline int is_todoentry_valid(todo_entry_t *entry)
+inline int is_todoentry_valid(todo_entry *entry)
 {
 	return entry->text_buffer[0] || is_date_valid(entry->deadline);
 }
@@ -49,7 +49,7 @@ inline int is_todoentry_valid(todo_entry_t *entry)
 struct node
 {
 	struct node *next;
-	todo_entry_t *val;
+	todo_entry *val;
 };
 
 void node_destroy(struct node *n);
@@ -69,9 +69,9 @@ void llist_add_node_first(llist *list, struct node *n);
 
 struct node* llist_pop_node_first(llist *list);
 
-int llist_add_end(llist *list, todo_entry_t *val);
+int llist_add_end(llist *list, todo_entry *val);
 
-int llist_add_first(llist *list, todo_entry_t *val);
+int llist_add_first(llist *list, todo_entry *val);
 
 void llist_delete_after(llist* list, struct node *prev);
 
@@ -79,7 +79,7 @@ void llist_destroy_contents(llist *list);
 
 struct node *llist_nth_node(llist *list, size_t n);
 
-todo_entry_t *llist_nth_entry(llist *list, size_t n);
+todo_entry *llist_nth_entry(llist *list, size_t n);
 
 int llist_delete_nth_entry(llist *list, size_t n);
 
@@ -93,7 +93,7 @@ int llist_move(llist *list, size_t from, size_t to, size_t where);
 
 int llist_swap(llist *list, size_t idx1, size_t idx2);
 
-int llist_sort(llist *list, int(*comparator)(const todo_entry_t*, const todo_entry_t*));
+int llist_sort(llist *list, int(*comparator)(const todo_entry*, const todo_entry*));
 
 //todolist_load.c
 int isseparator(int c);
@@ -132,7 +132,7 @@ int load_date_string(date_t *d, const char *str_start);
 
 void strcpy_buffer(size_t buffer_size, char *buffer, const char *source);
 
-int load_one_entry(FILE *f, todo_entry_t *entry);
+int load_one_entry(FILE *f, todo_entry *entry);
 
 int load_entries(llist *list, const char *path);
 
@@ -141,7 +141,7 @@ int load_entries(llist *list, const char *path);
 
 int write_date(FILE *out, const date_t date);
 
-int write_one_entry(FILE *f, todo_entry_t *entry);
+int write_one_entry(FILE *f, todo_entry *entry);
 
 int write_entries(FILE *f, llist *list);
 
@@ -170,13 +170,13 @@ int parse_opt_basichelp(const char *str);
 int parse_opt_cmdhelp(const char *str);
 
 //cli functionality
-int generate_entry_splitted(todo_entry_t *entry, const char status, const date_t orig_date, char *dead_date);
+int generate_entry_splitted(todo_entry *entry, const char status, const date_t orig_date, char *dead_date);
 
-int generate_entry_from_string(const char* string, todo_entry_t *entry);
+int generate_entry_from_string(const char* string, todo_entry *entry);
 
 int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size_t, size_t, size_t));
 
-void print_todoentry(FILE *out, const todo_entry_t entry, const int style);
+void print_todoentry(FILE *out, const todo_entry entry, const int style);
 
 void print_todolist(const llist *list, const int style);
 

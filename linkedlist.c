@@ -52,7 +52,7 @@ struct node* llist_pop_node_first(llist *list)
 	return out;
 }
 
-int llist_add_end(llist *list, todo_entry_t *val)
+int llist_add_end(llist *list, todo_entry *val)
 {
 	if (list == NULL) return 0;
 	
@@ -67,7 +67,7 @@ int llist_add_end(llist *list, todo_entry_t *val)
 	return 1;
 }
 
-int llist_add_first(llist *list, todo_entry_t *val)
+int llist_add_first(llist *list, todo_entry *val)
 {
 	if (list == NULL) return 0;
 	
@@ -124,7 +124,7 @@ struct node *llist_nth_node(llist *list, size_t n)
 	return current;
 }
 
-todo_entry_t *llist_nth_entry(llist *list, size_t n)
+todo_entry *llist_nth_entry(llist *list, size_t n)
 {	//returns pointer to nth entry linked list, indexing from zero
 	//if there is no such entry then it returns NULL
 	struct node *entry_node = llist_nth_node(list, n);
@@ -297,49 +297,66 @@ int llist_swap(llist *list, size_t idx1, size_t idx2)
 	max_node = current;
 	
 	//swaping
-	todo_entry_t *tmp = min_node->val;
+	todo_entry *tmp = min_node->val;
 	min_node->val = max_node->val;
 	max_node->val = tmp;	
 
 	return 0;
 }
 
-int llist_sort(llist *list, int(*comparator)(const todo_entry_t*, const todo_entry_t*))
-{
-	if (!list) return -1;
-	if (!list->first) return 0;
+int llist_sort(llist *list, int(*comparator)(const todo_entry*, const todo_entry*))
+{	//sorts the llist in insert-sort style, however because llist is single linked
+	//this must be implemented differently (we can't reverse search the spot for inserted node)
+	//O(n) when sorted, O(n * k) for k unsorted nodes
+	if (!list)
+	{
+		fprintf(stderr, "Err: Sort function recieved NULL pointer to sorted linked list!\n");
+		return -1;
+	}
 	
 	struct node *sorted = list->first;
 	while (sorted && sorted->next)
 	{
 		struct node *current = sorted->next;
 		
-		if (comparator(sorted->val, current->val) < 0)
+		//current is already in correct spot
+		if (comparator(sorted->val, current->val) >= 0)
 		{
-			//disconnecting currently sorted node from the list
-			sorted->next = current->next;
-			current->next = NULL;
-			//correcting linked lists last pointer
-			if (list->last == current) list->last = sorted; //TODO maybe rework this?
-			
-			//finding correct spot for currently sorted node
-			struct node *check = list->first, *check_prev = NULL;
-			//TODO checking for check being NULL
-			while (comparator(check->val, current->val) >= 0)
+			sorted = sorted->next;
+			continue;
+		}
+		
+		//current is in wrong spot, disconnect it from the 
+		sorted->next = current->next;
+		current->next = NULL;
+		//correcting linked lists last pointer
+		if (list->last == current) list->last = sorted;
+		
+		//finding correct spot for currently sorted node
+		struct node *check = list->first, *check_prev = NULL;
+		//this cycle will end as check must at some point reach 'sorted' node
+		while (comparator(check->val, current->val) >= 0)
+		{
+			check_prev = check;
+			check = check->next;
+
+			if (!check) //this should never happen, avoiding UB when NULL deref.
 			{
-				check_prev = check;
-				check = check->next;
-			}
-			
-			//connecting the disconnected node back
-			if (!check_prev) llist_add_node_first(list, current); //it's the first node
-			else 
-			{
-				current->next = check;
-				check_prev->next = current;
+				//NOTE maybe pointless, because compiler might optimize this branch away
+				check_prev->next = current; //so the current doesnt leak memory (but rest of llist will)
+				//maybe fix last ptr with: list->last = current?
+				fprintf(stderr, "Err: Sort function encountered/created unexpected NULL in the middle of sorted linked list!\n");
+				return 1;
 			}
 		}
-		else sorted = sorted->next;
+		
+		//connecting the disconnected node back
+		if (!check_prev) llist_add_node_first(list, current); //it's the first node
+		else 
+		{
+			current->next = check;
+			check_prev->next = current;
+		}
 	}
 	
 	return 0;

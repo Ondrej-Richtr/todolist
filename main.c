@@ -4,6 +4,8 @@
 #ifndef DEFAULT_PATH
 #define DEFAULT_PATH "./.todofile"
 #endif
+
+//RELEASE
 #define VER0 0
 #define VER1 1
 #define VER2 2

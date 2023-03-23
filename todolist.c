@@ -7,7 +7,7 @@ int is_date_valid(const date_t date);
 
 void date_null(date_t *date);
 
-int is_todoentry_valid(todo_entry_t *entry);
+int is_todoentry_valid(todo_entry *entry);
 
 //definitions:
 
@@ -30,19 +30,19 @@ date_t get_current_date()
 	return output;
 }
 
-//comparators for todo_entry_t
+//comparators for todo_entry structs
 //expecting non-NULL pointers, used as func.pointers -> no point in making them inline
 //	if entries are same comparator returns 0
 //	if first entry is 'greater' it retruns negative number
 //	if first entry is 'smaller' it returns positive number
-int todo_compar_statdone(const todo_entry_t *e1, const todo_entry_t *e2)
+int todo_compar_statdone(const todo_entry *e1, const todo_entry *e2)
 {
 	//this assumess that status done is always same positive number and undone always zero
 	return (int)e1->status - (int)e2->status;
 	//return e1->status > e2->status ? -1 : (e1->status < e2->status ? 1 : 0);
 	//return e1->status ? (e2->status ? 0 : 1) : (e2->status ? -1 : 0);
 }
-int todo_compar_statundone(const todo_entry_t *e1, const todo_entry_t *e2)
+int todo_compar_statundone(const todo_entry *e1, const todo_entry *e2)
 {
 	//this assumess that status done is always same positive number and undone always zero
 	return (int)e2->status - (int)e1->status;
@@ -62,22 +62,22 @@ int compar_dates(const date_t d1, const date_t d2) //date comparator
 	if (d1.day != d2.day) return d1.day > d2.day ? -1 : 1;
 	return 0;
 }
-int todo_compar_deadline(const todo_entry_t *e1, const todo_entry_t *e2)
+int todo_compar_deadline(const todo_entry *e1, const todo_entry *e2)
 {
 	return compar_dates(e1->deadline, e2->deadline);
 }
-int todo_compar_created(const todo_entry_t *e1, const todo_entry_t *e2)
+int todo_compar_created(const todo_entry *e1, const todo_entry *e2)
 {
 	return compar_dates(e1->created_date, e2->created_date);
 }
-int todo_compar_text(const todo_entry_t *e1, const todo_entry_t *e2)
+int todo_compar_text(const todo_entry *e1, const todo_entry *e2)
 {
 	//e2 and e1 must be switched to follow out comparison logic (maybe rework this later?)
 	return strcmp((char*)e2->text_buffer, (char*)e1->text_buffer);
 }
 
 //cli functionality
-int generate_entry_from_string(const char* string, todo_entry_t *entry)
+int generate_entry_from_string(const char* string, todo_entry *entry)
 {	//fills todo_entry according to given C-style string
 	//the string should be in format: [STATUS|][DEADLINE|]TEXT; STATUS and DEADLINE are optional
 	//'|' is separator, there needs to be atleast one between each of STATUS, DEADLINE, TEXT.
@@ -204,7 +204,7 @@ int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size
 	return 0;
 }
 
-void print_todoentry(FILE *out, const todo_entry_t entry, const int style)
+void print_todoentry(FILE *out, const todo_entry entry, const int style)
 {	//prints todo entry into file 'out', if out is NULL then it does nothing
 	//for style explanation see 'print_todolist' function
 	if (!out) return;
@@ -292,10 +292,10 @@ int cmd_add(llist *list, char *data_buffer)
 		return -1;
 	}
 	
-	todo_entry_t *entry = malloc(sizeof(todo_entry_t));
+	todo_entry *entry = malloc(sizeof(todo_entry));
 	if (!entry)
 	{
-		fprintf(stderr, "Err: Failed to allocate %u bytes of memory!\n", sizeof(todo_entry_t));
+		fprintf(stderr, "Err: Failed to allocate %u bytes of memory!\n", sizeof(todo_entry));
 		return 1;
 	}
 	
@@ -319,7 +319,7 @@ int cmd_add(llist *list, char *data_buffer)
 	if (!llist_add_end(list, entry))
 	{
 		fprintf(stderr, "Err: Failed to add following entry into the list!\nThe entry: ");
-		print_todoentry(stderr, *entry, 0);
+		print_todoentry(stderr, *entry, 2);
 		fputc('\n', stderr);
 		free(entry);
 		return 4;
@@ -509,7 +509,7 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose, int noninter)
 		return 2;
 	}
 
-	todo_entry_t *old_entry = llist_nth_entry(list, num - 1);
+	todo_entry *old_entry = llist_nth_entry(list, num - 1);
 	if (!old_entry)
 	{
 		fprintf(stderr, "Err: Index '%u' to be changed is out of bounds!\n", num);
@@ -546,7 +546,7 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose, int noninter)
 		entry_str = (char*)line_buffer;
 	}
 	
-	todo_entry_t new_entry;
+	todo_entry new_entry;
 	int gen_err = generate_entry_from_string(entry_str, &new_entry); //should not modify give entry_str
 	if (gen_err)
 	{
@@ -672,7 +672,7 @@ int cmd_move(llist *list, char *data_buffer)
 
 void print_basichelp(int isoption)
 {	//just prints basic help for interactive mode or help mode (when isoption == true)
-	if (isoption) //TODO implement isoption version
+	if (isoption)
 	{
 		//TODO make this proper
 		puts("Usage:   todo [options] [command]");
@@ -952,12 +952,27 @@ int cmd_sort(llist *list, char *data_buffer)
 	{
 		next_word = next_word_skip(data_buffer); //next_word should not be NULL
 		
-		//sorting - we ignore return values as they are non-zero onůy for list == NULL (shouldn't happen here)
-		if (!strcmp("done", data_buffer)) llist_sort(list, todo_compar_statdone);
-		else if (!strcmp("undone", data_buffer)) llist_sort(list, todo_compar_statundone);
-		else if (!strcmp("deadline", data_buffer)) llist_sort(list, todo_compar_deadline);
-		else if (!strcmp("age", data_buffer)) llist_sort(list, todo_compar_created); //"age" might be bad term for this?
-		else if (!strcmp("text", data_buffer)) llist_sort(list, todo_compar_text);
+		//sorting - we dont print errmsg when err in llist_sort as it prints it's own (also might happen extremly rarily)
+		if (!strcmp("done", data_buffer))
+		{
+			if (llist_sort(list, todo_compar_statdone)) return 3;
+		}
+		else if (!strcmp("undone", data_buffer))
+		{
+			if (llist_sort(list, todo_compar_statundone)) return 3;
+		}
+		else if (!strcmp("deadline", data_buffer))
+		{
+			if (llist_sort(list, todo_compar_deadline)) return 3;
+		}
+		else if (!strcmp("age", data_buffer)) //"age" might be bad term for this?
+		{
+			if (llist_sort(list, todo_compar_created)) return 3;
+		}
+		else if (!strcmp("text", data_buffer))
+		{
+			if (llist_sort(list, todo_compar_text)) return 3;
+		}
 		else
 		{	
 			fprintf(stderr, "Err: Wrong parameter '%s' in sort command! Type 'help sort' for details.\n", data_buffer);
@@ -1172,8 +1187,7 @@ int inter_cmd(FILE *input, llist *list, char buffer[CLI_LINE_MAX_LEN + 1])
 		return 1;
 	}
 	
-	if (do_inter_cmd(list, type, tail_ptr)) return 2;
-	
+	if (do_inter_cmd(list, type, tail_ptr)) return 2; //err msg printed inside of cmds
 	return 0;
 }
 
@@ -1251,7 +1265,6 @@ int noninteractive_mode(const size_t options_num, const char **options, const ch
 		return 1;
 	}
 	
-	//TODO noninter mode
 	size_t cmd_counter = 0;
 	int loop_err = 0;
 	for (size_t i = 1; i < options_num; i++)
@@ -1288,6 +1301,20 @@ int noninteractive_mode(const size_t options_num, const char **options, const ch
 			break;
 		}
 	}
+	
+	switch (loop_err) //TODO move err handling here, when err dont open/change the todo file
+	{
+	case 1:
+		break;
+	case 2:
+		break;
+	case 3:
+		break;
+	case 4:
+		break;
+	default: //TODO unimplemented err?
+		break;
+	}
 
 	FILE *out_file = fopen(todo_file_path, "w");
 	if (!out_file) //IDEA maybe make this to be saved and backup file somewhere?
@@ -1302,11 +1329,12 @@ int noninteractive_mode(const size_t options_num, const char **options, const ch
 	int write_err = write_todofile(out_file, &list);
 	fclose(out_file);
 
+	//IDEA maybe dont write changes when err happens?
 	switch (loop_err) //this is moved after writing changes into todofile - if writing fails there is no reason to print this too
 	{
 		//TODO handle loop_err errors - print when rest of cmd query ignored
 	}
 	
 	llist_destroy_contents(&list);
-	return write_err; //check errors
+	return write_err ? 3 : 0;
 }
