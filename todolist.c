@@ -190,8 +190,9 @@ int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size
 
 	if (!no_err)
 	{
-		if (!last) fprintf(stderr, "Because of previous error there were no changes made.\n");
-		else fprintf(stderr, "Because of previous error changes stopped at index '%lu'.\n", last);
+		//IDEA make those errmsgs respect interactive/noninteractive modes
+		if (!last) fprintf(stderr, "Because of previous error(s) there were no changes made.\n");
+		else fprintf(stderr, "Because of previous error(s) changes stopped at index '%lu'.\n", last);
 		return 1;
 	}
 
@@ -1200,27 +1201,26 @@ int interactive_mode(FILE *input, const char *todo_file_path)
 	if (load_entries(&list, todo_file_path))
 	{
 		//this err msg assumess that more detailed err msg had been already printed by load_entries
-		fprintf(stderr,"Loading of todo entries from file failed! Aborting...\n");
+		fprintf(stderr,"Abort: Exiting the interactive mode because of previous error(s)!\n");
 		return 1;
 	}
 	
 	char line_buffer[CLI_LINE_MAX_LEN + 1] = { 0 };
 	size_t line_len = 0;
-	int inter_err = 0;
+	int inter_err = 0; // no use for this now
 	
-	//IDEA make prompt work
-	//write_prompt();
+	//IDEA prompt?
 	while ((line_len = readline(input, CLI_LINE_MAX_LEN, line_buffer)))
 	{	//also means that loaded line is not an empty string
 		//err gets ignored as the program can continue and err msg is already printed
 		inter_err = inter_cmd(input, &list, line_buffer);
-		//write_prompt();
 	}
 
 	FILE *out_file = fopen(todo_file_path, "w");
 	if (!out_file) //IDEA maybe make this to be saved and backup file somewhere?
 	{
 		fprintf(stderr, "Err: Failed to open file for writing at path: '%s'!\n", todo_file_path);
+		fprintf(stderr, "Abort: Because of previous error all changes were DISCARTED!\n");
 		llist_destroy_contents(&list);
 		return 2;
 	}
@@ -1228,10 +1228,10 @@ int interactive_mode(FILE *input, const char *todo_file_path)
 	//write_err gets ignored as if the error occurred the err msg was printed by write_entries
 	//if error occurs then the file gets emptied, but usually there's not much of room for error
 	int write_err = write_todofile(out_file, &list);
-	
 	fclose(out_file);
+	
 	llist_destroy_contents(&list);
-	return write_err; //check errors
+	return write_err ? 3 : 0;
 }
 
 int noninter_cmd(llist *list, const char *str)
@@ -1302,24 +1302,36 @@ int noninteractive_mode(const size_t options_num, const char **options, const ch
 		}
 	}
 	
-	switch (loop_err) //TODO move err handling here, when err dont open/change the todo file
+	if (loop_err)
 	{
-	case 1:
-		break;
-	case 2:
-		break;
-	case 3:
-		break;
-	case 4:
-		break;
-	default: //TODO unimplemented err?
-		break;
+		switch (loop_err)
+		{
+		case 1:
+		case 3:
+			fprintf(stderr, "Err: Non-interactive mode encountered unexpected NULL as input command!\n");
+			break;
+		case 2:
+			fprintf(stderr, "Err: Syntax error in Non-interactive mode while processing commands!\n");
+			break;
+		case 4:
+			//no need to print anything as noninter_cmd should print it's own errors
+			break;
+		default:
+			fprintf(stderr, "Err: Unexpected error happened in Non-interactive mode!\n");
+			break;
+		}
+		
+		fprintf(stderr, "Abort: Because of previous error(s) there were NO CHANGES MADE!\n");
+		llist_destroy_contents(&list);
+		return 4;
 	}
 
 	FILE *out_file = fopen(todo_file_path, "w");
+	
 	if (!out_file) //IDEA maybe make this to be saved and backup file somewhere?
 	{
-		fprintf(stderr, "Err: Failed to open file for writing at path: '%s'!\n", todo_file_path);
+		fprintf(stderr, "Err: Failed to open file for writing changes at path: '%s'!\n", todo_file_path);
+		fprintf(stderr, "Abort: Because of previous error(s) there were NO CHANGES MADE!\n");
 		llist_destroy_contents(&list);
 		return 2;
 	}
@@ -1328,12 +1340,6 @@ int noninteractive_mode(const size_t options_num, const char **options, const ch
 	//if error occurs then the file gets emptied, but usually there's not much of room for error
 	int write_err = write_todofile(out_file, &list);
 	fclose(out_file);
-
-	//IDEA maybe dont write changes when err happens?
-	switch (loop_err) //this is moved after writing changes into todofile - if writing fails there is no reason to print this too
-	{
-		//TODO handle loop_err errors - print when rest of cmd query ignored
-	}
 	
 	llist_destroy_contents(&list);
 	return write_err ? 3 : 0;

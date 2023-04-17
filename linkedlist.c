@@ -97,7 +97,7 @@ void llist_delete_after(llist* list, struct node *prev)
 	node_destroy(deleted);
 }
 
-void llist_destroy_contents(llist *list)	//destroys contents deeply
+void llist_destroy_contents(llist *list) //destroys contents deeply
 {
 	struct node *n = NULL;
 	
