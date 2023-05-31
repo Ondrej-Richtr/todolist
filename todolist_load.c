@@ -375,7 +375,7 @@ int load_entries(llist *list, const char *path)
 		{	//adding to list failed
 			//same error message as in cmd_add:
 			fprintf(stderr, "Err: Failed to add following entry into the list!\nThe entry: '");
-			print_todoentry(stderr, *entry, 0);
+			print_todoentry(stderr, entry, 0);
 			fputs("'\n", stderr);
 			llist_destroy_contents(list);
 			free(entry);

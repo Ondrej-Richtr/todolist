@@ -75,11 +75,10 @@ enum Mode parse_options(const int argc, char **argv, char **path_ptr)
 	if (argc < 1 || argv[0] == NULL) return err_c; //basic checks
 	
 	enum Mode mode = intermode_c;
-	enum Option opt = undefopt_c;
 	
 	for (size_t i = 1; i < (size_t)argc && argv[i]; i++)
 	{
-		opt = parse_option_string(argv[i]);
+		enum Option opt = parse_option_string(argv[i]);
 		
 		switch (opt)
 		{
@@ -112,11 +111,18 @@ enum Mode parse_options(const int argc, char **argv, char **path_ptr)
 					return err_c;
 				}
 				
-				if (!is_valid_cmd(argv[i], NULL))
+				enum CmdType cmd; 
+				if (!is_valid_cmd(argv[i], &cmd))
 				{
 					fprintf(stderr, "Err: '%s' is not a valid command! Try 'help' for list of all commands.\n", argv[i]);
 					return err_c;
 				}
+				else if (cmd == help_c)
+				{
+					fprintf(stderr, "Err: Help command is not implemented in non-interactive mode! Use options '-h', --help' or help in interactive mode.\n");
+					return err_c;
+				}
+				
 				if (mode == intermode_c) mode = nonintermode_c;
 			}
 			break;
@@ -128,10 +134,16 @@ enum Mode parse_options(const int argc, char **argv, char **path_ptr)
 			return err_c;
 		case undefopt_c:
 			{
-				
 				//this means single command noninteractive mode
-				if (i + 1 == (size_t)argc && mode == intermode_c && is_valid_cmd(argv[i], NULL)) //IDEA maybe not NULL?
+				enum CmdType cmd;
+				if (i + 1 == (size_t)argc && mode == intermode_c && is_valid_cmd(argv[i], &cmd))
 				{
+					if (cmd == help_c) 
+					{
+						fprintf(stderr, "Err: Help command is not implemented in non-interactive mode! Use options '-h', --help' or help in interactive mode.\n");
+						return err_c;
+					}
+					
 					//we can return as this is last string in argv anyways
 					return nonintermode_c;
 				}

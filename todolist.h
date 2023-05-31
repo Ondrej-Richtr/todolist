@@ -147,8 +147,6 @@ int write_entries(FILE *f, llist *list);
 
 int write_todofile(FILE *f, llist *list);
 
-void write_prompt();
-
 //todolist.c
 enum CmdType{ help_c, print_c, add_c, del_c, mark_c, clear_c, change_c, move_c, swap_c, sort_c };
 enum SpecType{ all_c, done_c, undone_c};
@@ -176,7 +174,7 @@ int generate_entry_from_string(const char* string, todo_entry *entry);
 
 int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size_t, size_t, size_t));
 
-void print_todoentry(FILE *out, const todo_entry entry, const int style);
+void print_todoentry(FILE *out, const todo_entry *entry, const int style);
 
 void print_todolist(const llist *list, const int style);
 

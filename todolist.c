@@ -205,33 +205,33 @@ int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size
 	return 0;
 }
 
-void print_todoentry(FILE *out, const todo_entry entry, const int style)
-{	//prints todo entry into file 'out', if out is NULL then it does nothing
+void print_todoentry(FILE *out, const todo_entry *entry, const int style)
+{	//prints todo entry into file 'out', if out or entry is NULL then it does nothing
 	//for style explanation see 'print_todolist' function
-	if (!out) return;
+	if (!out || !entry) return;
 	
 	if (style)
 	{
 		//done/undone
-		if (entry.status) fputs("[X] ", out);
+		if (entry->status) fputs("[X] ", out);
 		else fputs("[ ] ", out);
 		
 		//deadline
-		if (style >= 2 && (is_date_valid(entry.deadline) || style >= 4))
+		if (style >= 2 && (is_date_valid(entry->deadline) || style >= 4))
 		{
-			write_date(out, entry.deadline);
+			write_date(out, entry->deadline);
 			fputs(" | ", out);
 		}
 		
 		//created date
 		if (style >= 5)
 		{
-			write_date(out, entry.created_date);
+			write_date(out, entry->created_date);
 			fputs(" | ", out);
 		}
 	}
 	
-	fputs(entry.text_buffer, out);
+	fputs(entry->text_buffer, out);
 }
 
 void print_todolist(const llist *list, const int style)
@@ -245,7 +245,7 @@ void print_todolist(const llist *list, const int style)
 	for (struct node *n = list->first; n != NULL; n = n->next)
 	{
 		if (style > 2) printf("%3u\t", num++);
-		print_todoentry(stdout, *(n->val), style);
+		print_todoentry(stdout, n->val, style);
 		putchar('\n');
 	}
 }
@@ -320,7 +320,7 @@ int cmd_add(llist *list, char *data_buffer)
 	if (!llist_add_end(list, entry))
 	{
 		fprintf(stderr, "Err: Failed to add following entry into the list!\nThe entry: ");
-		print_todoentry(stderr, *entry, 2);
+		print_todoentry(stderr, entry, 2);
 		fputc('\n', stderr);
 		free(entry);
 		return 4;
@@ -520,7 +520,7 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose, int noninter)
 	if (is_verbose)
 	{
 		fprintf(stdout, "You are about to change the #%u entry: '", num);
-		print_todoentry(stdout, *old_entry, 3); //this should print in some meaningful style
+		print_todoentry(stdout, old_entry, 3); //this should print in some meaningful style
 		fputs("'\nWrite changed version at the next line or you can abort by writing an empty line\n", stdout);
 	}
 	

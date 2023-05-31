@@ -26,7 +26,7 @@ int write_one_entry(FILE *f, todo_entry *entry)
 		break;
 	default:
 		fprintf(stderr, "Warning: Status of a entry has unexpected value '%d'! Interpeting entry as done.\nThe entry: ", entry->status);
-		print_todoentry(stderr, *entry, 2);
+		print_todoentry(stderr, entry, 2);
 		fputc('\n', stderr);
 	case 1:
 		fputc('X', f);	//usually 1
@@ -57,7 +57,7 @@ int write_entries(FILE *f, llist *list)
 		//write_err value gets ignored
 		//same error message as in cmd_add:
 		fprintf(stderr, "Err: Failed to write following entry into the todo file!\nThe entry: ");
-		print_todoentry(stderr, *(n->val), 2);
+		print_todoentry(stderr, n->val, 2);
 		fputc('\n', stderr);
 		return 1;
 	}
@@ -88,10 +88,4 @@ int write_todofile(FILE *f, llist *list)
 	write_standard_comments(f);
 	if (write_entries(f, list)) return 1; //errmsgs printed inside of write_entries
 	return 0;
-}
-
-//USELESS
-void write_prompt() //IDEA maybe inline this?
-{	//writes prompt into stdout
-	fputs("> ", stdout);
 }

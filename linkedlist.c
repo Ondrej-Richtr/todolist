@@ -53,12 +53,12 @@ struct node* llist_pop_node_first(llist *list)
 }
 
 int llist_add_end(llist *list, todo_entry *val)
-{
-	if (list == NULL) return 0;
+{	//returns true value wether entry was added into the list
+	if (!list) return 0;
 	
 	struct node *n = malloc(sizeof(struct node));
 	
-	if (n == NULL) return 0;
+	if (!n) return 0;
 	
 	n->next = NULL;
 	n->val = val;
@@ -68,12 +68,12 @@ int llist_add_end(llist *list, todo_entry *val)
 }
 
 int llist_add_first(llist *list, todo_entry *val)
-{
-	if (list == NULL) return 0;
+{	//returns true value wether entry was added into the list
+	if (!list) return 0;
 	
 	struct node *n = malloc(sizeof(struct node));
 	
-	if (n == NULL) return 0;
+	if (!n) return 0;
 	
 	n->next = NULL;
 	n->val = val;
