@@ -13,11 +13,6 @@ int isseparator(int c)
 	return c == '|';
 }
 
-int isempty(char* str)
-{
-	return !str || !str[0];
-}
-
 void skip_until(FILE *f, int *in_char, char until)
 {
 	while (*in_char != EOF && (char)*in_char != until) *in_char = fgetc(f);
@@ -191,20 +186,6 @@ int load_num_tolerant_16(FILE *f, uint_least16_t* num, int *in_char) //16 bit ve
 	return load_num_16(f, num, in_char);
 }
 
-//USELESS
-/*char* string_num_end(char *num_start, char **new_start)
-{	//find first number in given string 'num_start' and returns where this number ends
-	//if new_start is not NULL then stores start of this number there
-	if (!num_start) return NULL;
-	
-	while (*num_start != '\0' && !isdigit((int)*num_start)) num_start++;
-	
-	if (new_start != NULL) *new_start = num_start; //setting where number starts
-	
-	while (*num_start != '\0' && isdigit((int)*num_start)) num_start++;
-	return num_start;
-}*/
-
 int load_date(FILE *f, date_t *d, int c)
 {	//loads from stream 'f' date to given 'd', first char given as 'c'
 	//returns nonzero if error occurred
@@ -245,28 +226,6 @@ int load_date_string(date_t *d, const char *str)
 	
 	return 0;
 }
-
-//USELESS
-/*size_t load_buffer(FILE *f, char buffer[TEXT_MAX_LEN], int *in_char)
-{	//loads text from file into buffer, until it reaches max size or newline or EOF
-	//returns amount of characters loaded, 0 also when given invalid input
-	//if given non-NULL in_char then it takes that char as first character and returns last char there
-	if (!f || !buffer) return 0;
-	
-	size_t count = 0;
-	int c;
-	if (in_char == NULL) c = fgetc(f);
-	else c = *in_char;
-	
-	while (c != EOF && c != '\n' && count < TEXT_MAX_LEN)
-	{
-		buffer[count++] = (char)c;
-		c = fgetc(f);
-	}
-	
-	if (in_char != NULL)*in_char = c;
-	return count;
-}*/
 
 void strcpy_buffer(size_t buffer_size, char *buffer, const char *source)
 {	//copies content of source string into buffer of given size + 1 (null char)
@@ -343,7 +302,7 @@ int load_entries(llist *list, const char *path)
 		
 		if ((status = load_one_entry(f, entry)) > 0)
 		{	//positive return value means something went wrong
-			fprintf(stderr, "Err: Loading of a entry '%lu' failed!", index);
+			fprintf(stderr, "Err: Loading of a entry '%u' failed!", index);
 			switch (status)
 			{
 			case 2:

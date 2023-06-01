@@ -8,7 +8,7 @@
 //RELEASE
 #define VER0 0
 #define VER1 1
-#define VER2 2
+#define VER2 3
 
 
 //options parsing stuff
@@ -65,11 +65,12 @@ enum Option parse_option_string(const char *str)
 
 enum Mode parse_options(const int argc, char **argv, char **path_ptr)
 {	//parses commandline options and decides which mode to launch program in
-	//returns enum whether error occurred (also print error) or the mode enum:
-	//interactive - launches interactive loop (happens when no -e options specified)
-	//noninteractive - launches non-interactive loop (when atleast one -e option)
-	//version - prints current version, author and exits (when -v or --version)
-	//help - prints commandline help and exits (when -h or --help and not version mode)
+	//returns enum whether error occurred (also prints errors) or the mode enum:
+	// -interactive		launches interactive loop (happens when no -e options specified)
+	// -noninteractive 	launches non-interactive loop
+	//					 (when atleast one -e option or last argument is valid cmd)
+	// -version	 		prints current version, author and exits (when -v or --version)
+	// -help 			prints commandline help and exits (when -h or --help and not version mode)
 	
 	*path_ptr = DEFAULT_PATH; //default path if not changed by -f option
 	if (argc < 1 || argv[0] == NULL) return err_c; //basic checks

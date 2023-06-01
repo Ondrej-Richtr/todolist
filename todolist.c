@@ -12,7 +12,7 @@ int is_todoentry_valid(todo_entry *entry);
 //definitions:
 
 //time handling
-date_t get_current_date()
+date_t get_today_date()
 {	//tries to return current date given by system
 	//if it fails then it returns (invalid) zero date
 	date_t output;
@@ -119,7 +119,7 @@ int generate_entry_from_string(const char* string, todo_entry *entry)
 	strcpy_buffer(TEXT_MAX_LEN, (char*)entry->text_buffer, string + index);
 	
 	//loading the time this entry was created (current time)
-	entry->created_date = get_current_date();
+	entry->created_date = get_today_date();
 	
 	//return generate_entry_splitted(entry, status, orig_date, (char*)num_buffer);
 	return 0;
@@ -1193,9 +1193,9 @@ int inter_cmd(FILE *input, llist *list, char buffer[CLI_LINE_MAX_LEN + 1])
 }
 
 int interactive_mode(FILE *input, const char *todo_file_path)
-{	//eads lines from input until EOF and interprets them as cli commands
+{	//reads lines from input until EOF and interprets them as cli commands
 	//todo_file is_path is the path to file where current todo list entries
-	//are possibly stored and where the result will be written
+	//are possibly stored and also where the result will be written
 	
 	llist list = { NULL, NULL };
 	if (load_entries(&list, todo_file_path))
