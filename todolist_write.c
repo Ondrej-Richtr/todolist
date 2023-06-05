@@ -1,14 +1,6 @@
 #include "todolist.h"
 
 
-//USELESS
-/*void write_buffer(FILE *f, const char* buffer)
-{	//writes buffer into file,
-	//buffer should have size smaller or equal as TEXT_MAX_LEN
-	for (size_t index = 0; index < TEXT_MAX_LEN && buffer[index]; index++)
-		fputc(buffer[index], f);
-}*/
-
 int write_date(FILE *out, const date_t date)
 {	//prints given date into file 'out' in style: DAY MONTH YEAR
 	return fprintf(out, "%d. %d. %d", date.day, date.month, date.year);
