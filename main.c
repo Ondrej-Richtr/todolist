@@ -20,7 +20,7 @@ int parse_opt_basichelp(const char *str)
 {	//returns positive number if given string is '-h' (1) or '--help' (2)
 	//negative number if given string starts with '--help' (-1), zero otherwise
 	const char helpstr[] = "--help";
-	size_t helpstr_len = sizeof(helpstr)/sizeof(char) - 1; //-1 as we dont count term.char.	
+	size_t helpstr_len = sizeof(helpstr)/sizeof(char) - 1; //-1 as we dont count term.char.
 	
 	if (!strcmp("-h", str)) return 1; //str is '-h'
 	if (strncmp((char*)helpstr, str, helpstr_len)) return 0; //str does not start with '--help'
@@ -33,7 +33,7 @@ int parse_opt_cmdhelp(const char *str)
 	//doesnt have any text after '=' char (e.g. only whitespaces follow after '=')
 	//returns positive number (1) if there is non-whitespace text, zero otherwise
 	const char cmdhelpstr[] = "--help=";
-	size_t cmdhelpstr_len = sizeof(cmdhelpstr)/sizeof(char) - 1; //-1 as we dont count term.char.	
+	size_t cmdhelpstr_len = sizeof(cmdhelpstr)/sizeof(char) - 1; //-1 as we dont count term.char.
 	
 	if (strncmp((char*)cmdhelpstr, str, cmdhelpstr_len)) return 0; //does not start with '--help='
 	
@@ -165,7 +165,6 @@ enum Mode parse_options(const int argc, char **argv, char **path_ptr)
 //main stuff
 int main(int argc, char **argv)
 {
-	FILE *f = stdin;
 	char *path = NULL;
 	
 	enum Mode mode = parse_options(argc, argv, &path);
@@ -195,7 +194,7 @@ int main(int argc, char **argv)
 		}
 	case intermode_c:
 		{
-			int inter_err = interactive_mode(f, path);
+			int inter_err = interactive_mode(stdin, path);
 			if (inter_err)
 			{
 				//RELEASE no need to print this in release version

@@ -108,7 +108,11 @@ char* word_skip(char *string);
 
 const char* word_skip_const(const char *string);
 
-size_t readline(FILE *f, size_t max_size, char buffer[max_size + 1]);
+//size_t readline(FILE *f, size_t max_size, char buffer[max_size + 1]);
+
+size_t utf8_readline(FILE *f, size_t max_size, char buffer[max_size + 1], size_t *text_len);
+
+void utf8_last_trim(char *str, size_t length);
 
 //void skip_comment_blank_lines(FILE *f, int *in_char);
 
@@ -126,7 +130,7 @@ int load_date(FILE *f, date_t* d, int c);
 
 int load_date_string(date_t *d, const char *str_start);
 
-void strcpy_buffer(size_t buffer_size, char *buffer, const char *source);
+size_t strcpy_buffer(size_t buffer_size, char *buffer, const char *source);
 
 int load_one_entry(FILE *f, todo_entry *entry);
 
@@ -184,7 +188,7 @@ int cmd_mark(llist *list, const char *string);
 
 int cmd_clear(llist *list, char *data_buffer);
 
-int cmd_change(llist *list, char *data_buffer, int is_verbose, int noninter);
+int cmd_change(llist *list, char *data_buffer, FILE *input, int is_verbose, int noninter);
 
 int cmd_move(llist *list, char *data_buffer);
 

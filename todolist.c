@@ -115,17 +115,19 @@ int generate_entry_from_string(const char* string, todo_entry *entry)
 	//loading text
 	//string index now points to either end of string or at separator before text or text
 	if (isseparator(string[index])) index++;
+	
 	//now at end (empty text) or text (non empty)
-	strcpy_buffer(TEXT_MAX_LEN, (char*)entry->text_buffer, string + index);
+	size_t copied = strcpy_buffer(TEXT_MAX_LEN, (char*)entry->text_buffer, string + index);
+	utf8_last_trim((char*)entry->text_buffer, copied);
 	
 	//loading the time this entry was created (current time)
 	entry->created_date = get_today_date();
 	
-	//return generate_entry_splitted(entry, status, orig_date, (char*)num_buffer);
 	return 0;
 }
 
-int llist_asc_index_map(llist *list, const char *string, int(*func)(llist*, size_t, size_t, size_t))
+int llist_asc_index_map(llist *list, const char *string,
+						int(*func)(llist*, size_t, size_t, size_t))
 {	//reads indices (or ranges) from given string and performs 'func' on entries from llist under such indices
 	//indices (or ranges) must be specified in ascending order, otherwise they will be ignored
 	//'func' should return negative number when error and non-negative number of deleted entries
@@ -481,10 +483,12 @@ int cmd_clear(llist *list, char *data_buffer)
 	return 1;
 }
 
-int cmd_change(llist *list, char *data_buffer, int is_verbose, int noninter)
-{	//allows one specified entry in llist to be replaced (changed) by new entry
+int cmd_change(llist *list, char *data_buffer, FILE *input, int is_verbose, int noninter)
+{	//allows one specified entry in llist to be replaced (changed) by new entry,
 	//it parses the index of said entry from data_buffer, prints instructions if is_verbose
-	//if noninter false then it gets data for new entry from stdin else from the rest of data_buffer
+	//if noninter false then it gets data for new entry from given input stream
+	//else from the rest of data_buffer
+	//assumess input != NULL for noninter == false
 	//when empty string entered as new entry then it does nothing
 	//when error it prints errmsg and returns nonzero
 	if (!list || !data_buffer)
@@ -524,7 +528,7 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose, int noninter)
 		fputs("'\nWrite changed version at the next line or you can abort by writing an empty line\n", stdout);
 	}
 	
-	char *entry_str = NULL, line_buffer[CLI_LINE_MAX_LEN + 1] = { 0 }; //could be static, only for inter mode
+	char *entry_str = NULL, line_buffer[CLI_LINE_MAX_LEN + 1] = { 0 }; //buffer only for inter. mode
 	
 	if (noninter) //non-interactive mode - does not use line_buffer, uses data_buffer instead
 	{
@@ -538,22 +542,29 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose, int noninter)
 	}
 	else //interactive mode - uses line_buffer from stdout and not data_buffer
 	{
-		size_t line_len = readline(stdin, CLI_LINE_MAX_LEN, line_buffer);
+		size_t line_len = utf8_readline(input, CLI_LINE_MAX_LEN, line_buffer, NULL);
 		if (!line_len)
 		{
-			if (is_verbose) puts("Entry was left unchanged.");
+			if (is_verbose) puts("Entry was left unchanged."); //UNSURE stderr instead of stdout?
 			return 0;
 		}
+		
 		entry_str = (char*)line_buffer;
+		utf8_last_trim(entry_str, line_len);
+		
+		if (!line_buffer[0]) //utf8_readline loaded something, but it was trimmed away by utf8_last_trim
+		{
+			fprintf(stderr, "Err: No valid UTF-8 data inputted!\n");
+			return 7;
+		}
 	}
 	
 	todo_entry new_entry;
-	int gen_err = generate_entry_from_string(entry_str, &new_entry); //should not modify give entry_str
+	int gen_err = generate_entry_from_string(entry_str, &new_entry);
 	if (gen_err)
 	{
 		//error message should get printed by generate_entry_splitted
 		if (is_verbose) fprintf(stderr, "Leaving old entry unchanged\n");
-		//printf("Gen err: %d\n", gen_err);
 		return 4;
 	}
 	
@@ -565,7 +576,7 @@ int cmd_change(llist *list, char *data_buffer, int is_verbose, int noninter)
 	
 	//change the old entry into new one
 	*old_entry = new_entry;
-	if (is_verbose) printf("The #%u entry was changed successfully\n", num);
+	if (is_verbose) printf("The #%u entry was changed successfully\n", num); //UNSURE stderr insted of stdout?
 	
 	return 0;
 }
@@ -986,7 +997,7 @@ int cmd_sort(llist *list, char *data_buffer)
 	return 0;
 }
 
-int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
+int do_inter_cmd(llist *list, enum CmdType type, char *buffer, FILE *input)
 {	//calls correct functionality specified by command type argument
 	//passes in buffer if the function requires it
 	//error msgs are printed by functions themselves, except for wrong type
@@ -999,7 +1010,7 @@ int do_inter_cmd(llist *list, enum CmdType type, char *buffer)
 		case del_c: return llist_asc_index_map(list, buffer, delete_range);
 		case mark_c: return cmd_mark(list, buffer);
 		case clear_c: return cmd_clear(list, buffer);
-		case change_c: return cmd_change(list, buffer, 1, 0); //1 for verbose, 0 for interactive mode
+		case change_c: return cmd_change(list, buffer, input, 1, 0); //1 for verbose, 0 for interactive mode
 		case move_c: return cmd_move(list, buffer);
 		case swap_c: return cmd_swap(list, buffer);
 		case sort_c: return cmd_sort(list, buffer);
@@ -1018,8 +1029,11 @@ int do_noninter_cmd(llist *list, enum CmdType type, const char *data)
 	
 	//maximum of characters that are taken into account from data string
 	char buffer[CLI_LINE_MAX_LEN + 1] = { 0 }, *buffer_ptr = (char*)buffer;
+	
 	//making copy so commands can modify the string
-	strncpy(buffer_ptr, data, CLI_LINE_MAX_LEN);
+	//strncpy(buffer_ptr, data, CLI_LINE_MAX_LEN);
+	size_t copied = strcpy_buffer(CLI_LINE_MAX_LEN, buffer_ptr, data);
+	utf8_last_trim(buffer_ptr, copied);
 	
 	switch (type)
 	{
@@ -1033,7 +1047,7 @@ int do_noninter_cmd(llist *list, enum CmdType type, const char *data)
 		case del_c: return llist_asc_index_map(list, buffer_ptr, delete_range);
 		case mark_c: return cmd_mark(list, buffer_ptr);
 		case clear_c: return cmd_clear(list, buffer_ptr);
-		case change_c: return cmd_change(list, buffer_ptr, 0, 1); //0 for not verbose, 1 for noninteractive mode
+		case change_c: return cmd_change(list, buffer_ptr, NULL, 0, 1); //0 for not verbose, 1 for noninteractive mode
 		case move_c: return cmd_move(list, buffer_ptr);
 		case swap_c: return cmd_swap(list, buffer_ptr);
 		case sort_c: return cmd_sort(list, buffer_ptr);
@@ -1168,27 +1182,25 @@ int is_valid_cmd(const char *str, enum CmdType *type)
 	return type ? parse_cmd_type(copy_ptr, type) : parse_cmd_type(copy_ptr, &tmp);
 }
 
-int inter_cmd(FILE *input, llist *list, char buffer[CLI_LINE_MAX_LEN + 1])
+int inter_cmd(FILE *input, llist *list, char *str)
 {	//parses which command to be done from the buffer,
-	//then executes correct cli function
+	//then executes corresponding cli function,
 	//returns 1 if wrong command or other non-zero if error
-	buffer[CLI_LINE_MAX_LEN] = '\0'; //_security reasons_TM
-	char *cmd_ptr = (char*)buffer;
-	
+
 	//skipping initial whitespaces
-	while (*cmd_ptr && isspace((int)*cmd_ptr)) cmd_ptr++;
+	while (*str && isspace((int)*str)) str++;
 	
 	//splitting cmd and tail - they both shouldnt have initial whitespaces now
-	char* tail_ptr = next_word_skip(cmd_ptr);
+	char* tail_ptr = next_word_skip(str);
 		
 	enum CmdType type;
-	if (!parse_cmd_type(cmd_ptr, &type))
+	if (!parse_cmd_type(str, &type))
 	{
-		fprintf(stderr, "Err: Unknown command: '%s'! Type 'help' to get the list of all possible commands.\n", cmd_ptr);
+		fprintf(stderr, "Err: Unknown command: '%s'! Type 'help' to get the list of all possible commands.\n", str);
 		return 1;
 	}
 	
-	if (do_inter_cmd(list, type, tail_ptr)) return 2; //err msg printed inside of cmds
+	if (do_inter_cmd(list, type, tail_ptr, input)) return 2; //err msg printed inside of cmds
 	return 0;
 }
 
@@ -1210,7 +1222,7 @@ int interactive_mode(FILE *input, const char *todo_file_path)
 	int inter_err = 0; // no use for this now
 	
 	//IDEA prompt?
-	while ((line_len = readline(input, CLI_LINE_MAX_LEN, line_buffer)))
+	while ((line_len = utf8_readline(input, CLI_LINE_MAX_LEN, line_buffer, NULL)))
 	{	//also means that loaded line is not an empty string
 		//err gets ignored as the program can continue and err msg is already printed
 		inter_err = inter_cmd(input, &list, line_buffer);

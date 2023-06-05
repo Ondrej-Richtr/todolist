@@ -1,5 +1,6 @@
 #include "todolist.h"
 
+#define BAD_CHAR ('?')
 
 //RELEASE this?
 /*
@@ -11,6 +12,55 @@
 int isseparator(int c)
 {
 	return c == '|';
+}
+
+unsigned utf8_1prefix(const unsigned char byte)
+{	//returns the length of 1s prefix in byte
+	unsigned char mask = 1 << 7;
+	int length = 0;
+	
+	while (byte & mask)
+	{
+		length++;
+		mask >>= 1;
+	}
+	
+	return length;
+}
+
+int utf8_bytelen(const unsigned char byte)
+{	//returns the byte length of the utf8 character beginning with 'byte',
+	//for data carrying prefix returns -1 and for too long prefix -2
+	unsigned prefix_len = utf8_1prefix(byte);
+	
+	if (prefix_len == 0) return 1;	//ascii
+	if (prefix_len == 1) return -1;	//payload char
+	if (prefix_len > 4) return -2;	//nonsensical utf8 header
+	
+	return prefix_len;				//non-ascii utf8 header
+}
+
+int utf8_load(FILE *f, char *output, size_t output_capacity)
+{	//asumess that f is valid file stream and buffer_ptr is non-NULL
+	int c = getc(f);
+	if (c == EOF) return 0;
+	
+	int len = utf8_bytelen((unsigned char)c);
+	if (len == 0) return -1; //should not happen
+	if (len < 0) return -2; //bad UTF-8 format
+	if ((size_t)len > output_capacity) return -3;
+	
+	output[0] = (char)c;
+	for (int index = 1; index < len; index++)
+	{
+		//skipping first iteration as we already got that character
+		c = getc(f);
+		if (c == EOF || utf8_1prefix((unsigned char)c) != 1) return -4; //bad UTF-8 format
+		
+		output[index] = c;
+	}
+	
+	return len;
 }
 
 void skip_until(FILE *f, int *in_char, char until)
@@ -67,24 +117,89 @@ const char* word_skip_const(const char *string)
 	return string;
 }
 
-size_t readline(FILE *f, size_t max_size, char buffer[max_size + 1])
+/*size_t readline(FILE *f, size_t max_size, char buffer[max_size + 1])
 {	//reads single line from 'f' until newline char or EOF,
 	//if the input is larger than buffer it ONLY stops storing it,
 	//puts null character in buffer at the end of loaded string
-	//return number of characters loaded (excluding null char)
-	if (!f) return 0;
-	
+	//returns number of characters written (excluding null char)
+	//asumess that given file stream is non-NULL
 	int c;
-	size_t index = 0;
+	size_t length = 0;
 	
 	while ((c = fgetc(f)) != EOF && c != '\n')
 	{
-		//index++ must happen only if it is under the boundary
-		if (index < max_size) buffer[index++] = (char)c;
+		//length++ must happen only if it is under the boundary
+		if (length < max_size) buffer[length++] = (char)c;
 	}
 	
-	buffer[index] = '\0';
-	return index;
+	buffer[length] = '\0';
+	return length;
+}*/
+
+size_t utf8_readline(FILE *f, size_t max_size, char buffer[max_size + 1], size_t *text_len)
+{	//reads single line in UTF-8 format from 'f' until newline char or EOF,
+	//if the input is larger than buffer it ONLY stops storing it,
+	//if wrong UTF-8 format it replaces the bad data with BAD_CHAR,
+	//puts null character in buffer at the end of loaded string
+	//returns number of bytes written (excluding null char),
+	//if text_len != NULL it stores amount of actual text characters in it
+	//asumess that given file stream is non-NULL
+	size_t byte_len = 0, _text_len = 0;
+	int end_reached = 0;
+	
+	while (byte_len < max_size)
+	{
+		int loaded = utf8_load(f, (char*)buffer + byte_len, max_size - byte_len);
+		
+		if (loaded == 0)					//EOF encountered
+		{
+			end_reached = 1;
+			break;
+		}
+		
+		if (loaded == -3) break;			//not enough space in the buffer
+		else if (loaded < 0)				//bad UTF-8 format
+		{
+			buffer[byte_len] = BAD_CHAR;
+			byte_len++;
+		}
+		else if (buffer[byte_len] == '\n')	//newline encountered
+		{
+			end_reached = 1;
+			break;
+		}
+		else byte_len += loaded;			//everything went allright
+		
+		_text_len++;
+	}
+	 
+	while (!end_reached) //skip until end of line or EOF reached
+	{
+		int c = getc(f);
+		end_reached = c == EOF || c == '\n';
+	}
+	
+	buffer[byte_len] = '\0'; //IDEA maybe assert that byte_len <= max_size?
+	if (text_len) *text_len = _text_len;
+	return byte_len;
+}
+
+void utf8_last_trim(char *str, size_t length)
+{
+	if (!length) return;
+	
+	size_t index = length - 1;
+
+	while (index > 0 && utf8_1prefix((unsigned char)str[index]) == 1)
+	{
+		index--;
+	}
+	
+	int blen = utf8_bytelen((unsigned char)str[index]);
+	if (blen <= 0 || (size_t)blen != length - index)
+	{
+		memset(str + index, '\0', length - index);
+	}
 }
 
 void skip_comment_blank_lines(FILE *f, int *in_char)
@@ -203,7 +318,7 @@ int load_date(FILE *f, date_t *d, int c)
 int load_date_string(date_t *d, const char *str)
 {	//loads date from given string, returns non-null if not all numbers were loaded
 	//IDEA maybe add checks whether we load exactly 3 numbers (zeroes included)
-	if (!d || !str) return -1;
+	if (!d || !str) return -1; //IDEA remove this so we can be sure that 'd' gets filled
 	
 	size_t index = 0;
 	
@@ -227,18 +342,20 @@ int load_date_string(date_t *d, const char *str)
 	return 0;
 }
 
-void strcpy_buffer(size_t buffer_size, char *buffer, const char *source)
-{	//copies content of source string into buffer of given size + 1 (null char)
-	//does nothing if given invalid pointers
-	if (!buffer || !source) return;
+size_t strcpy_buffer(size_t buffer_size, char *buffer, const char *source)
+{	//copies content of source string into buffer of given size + 1 (null char),
+	//does nothing if given invalid pointers,
+	//return the amount of chars copied from source to buffer
+	if (!buffer || !source) return 0;
 	
 	size_t index = 0;
 	for (; index < buffer_size && source[index] != '\0'; index++)
 	{	//unoptimized solution but whatever
 		buffer[index] = source[index];
 	}
-	//printf("ending index: %u\n", index);
+
 	buffer[index] = '\0';
+	return index;
 }
 
 int load_one_entry(FILE *f, todo_entry *entry)
@@ -268,8 +385,9 @@ int load_one_entry(FILE *f, todo_entry *entry)
 	while (isseparator(c = fgetc(f))); //skipping separators
 
 	if (ungetc(c, f) == EOF) return 5;
-	//UNSURE do something with size
-	size_t size = readline(f, TEXT_MAX_LEN, (char*)entry->text_buffer);
+	
+	//returned bytes loaded ignored
+	utf8_readline(f, TEXT_MAX_LEN, (char*)entry->text_buffer, NULL);
 	
 	return 0;
 }
