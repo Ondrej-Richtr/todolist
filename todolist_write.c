@@ -1,3 +1,6 @@
+// This file is part of 'todolist' project which author is Ondřej Richtr
+// Seek more information about copyright in the LICENSE file included
+
 #include "todolist.h"
 
 

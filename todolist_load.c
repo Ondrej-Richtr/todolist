@@ -1,13 +1,10 @@
+// This file is part of 'todolist' project which author is Ondřej Richtr
+// Seek more information about copyright in the LICENSE file included
+
 #include "todolist.h"
 
 #define BAD_CHAR ('?')
 
-//RELEASE this?
-/*
-	WARNING FOR CODE READERS!
-	THIS .c FILE WAS WRITTEN AS ONE OF THE FIRST AND HASN'T 
-	BEEN REFACTORED YET! BEWARE OF BAD CODE QUALITY! thanks
-*/
 
 int isseparator(int c)
 {

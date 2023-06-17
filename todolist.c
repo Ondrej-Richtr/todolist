@@ -1,3 +1,6 @@
+// This file is part of 'todolist' project which author is Ondřej Richtr
+// Seek more information about copyright in the LICENSE file included
+
 #include "todolist.h"
 
 #define PRINT_DEFAULT 3
@@ -461,7 +464,6 @@ int cmd_clear(llist *list, char *data_buffer)
 	
 	if (parse_specifier_type(data_buffer, &spec))
 	{
-		//printf("Spec: %d\n", (int)spec);
 		switch (spec)
 		{
 			case all_c: llist_destroy_contents(list);

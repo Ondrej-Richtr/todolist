@@ -1,6 +1,10 @@
+// This file is part of 'todolist' project which author is Ondřej Richtr
+// This file is part of 'todolist' project which author is Ondřej Richtr
+// Seek more information about copyright in the LICENSE file included
+
 #include "todolist.h"
 
-//CHANGE OR OVERRIDE THIS MACRO IF YOU WANT DIFFERENT DEFAULT TODOFILE 
+//CHANGE OR OVERRIDE THIS MACRO IF YOU WANT DIFFERENT DEFAULT TODOFILE PATH
 #ifndef DEFAULT_PATH
 #define DEFAULT_PATH "./.todofile"
 #endif

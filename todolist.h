@@ -1,3 +1,6 @@
+// This file is part of 'todolist' project which author is Ondřej Richtr
+// Seek more information about copyright in the LICENSE file included
+
 #pragma once
 
 #include <stdlib.h>
@@ -34,10 +37,10 @@ inline void date_null(date_t *date)
 
 typedef struct
 {
-	uint_least8_t status;				//signalizes if entry was completed, 0 -> not done, 1 -> done, anything else should not happen
 	date_t 	created_date;				//date of creation (currently date of last modification)
 	date_t deadline;					//deadline for this entry
 	char text_buffer[TEXT_MAX_LEN + 1];	//description of entry, +1 for NULL char
+	uint_least8_t status;				//signalizes if entry was completed, 0 -> not done, 1 -> done, anything else should not happen
 } todo_entry;
 
 inline int is_todoentry_valid(todo_entry *entry)
@@ -98,8 +101,6 @@ int llist_sort(llist *list, int(*comparator)(const todo_entry*, const todo_entry
 //todolist_load.c
 int isseparator(int c);
 
-//void skip_until(FILE *f, int *in_char, char until);
-
 size_t copy_until_delimiter(size_t max_size, char buffer[max_size + 1], const char* source, int(*delim)(int));
 
 char* next_word_skip(char *string);
@@ -113,8 +114,6 @@ const char* word_skip_const(const char *string);
 size_t utf8_readline(FILE *f, size_t max_size, char buffer[max_size + 1], size_t *text_len);
 
 void utf8_last_trim(char *str, size_t length);
-
-//void skip_comment_blank_lines(FILE *f, int *in_char);
 
 int str_to_num(const char *string, size_t *end_index);
 
