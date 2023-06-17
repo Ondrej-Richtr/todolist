@@ -11,8 +11,8 @@
 
 //RELEASE
 #define VER0 0
-#define VER1 1
-#define VER2 3
+#define VER1 2
+#define VER2 0
 
 
 //options parsing stuff
@@ -132,10 +132,10 @@ enum Mode parse_options(const int argc, char **argv, char **path_ptr)
 			}
 			break;
 		case syntaxerrE_helpopt_c:
-			fprintf(stderr, "Err: Bad syntax for command help option! Usage is '--help=COMMAND'.\n");
+			fprintf(stderr, "Err: Bad syntax for command help option! Usage is '--help=COMMAND' or '--help=COMMAND1 COMMAND2...'.\n");
 			return err_c;
 		case syntaxerrC_helpopt_c:
-			fprintf(stderr, "Err: Bad syntax for command help option - empty command! Use '--help=COMMAND' syntax.\n");
+			fprintf(stderr, "Err: Bad syntax for command help option - empty command! Use '--help=COMMAND' or '--help=COMMAND1 COMMAND2...' syntax.\n");
 			return err_c;
 		case undefopt_c:
 			{
@@ -186,10 +186,9 @@ int main(int argc, char **argv)
 		return EXIT_SUCCESS;
 	case helpmode_c:
 		{
+			//value of help_ret ignored
 			int help_ret = cmd_help_noninter_parse((size_t)argc, (const char**)argv);
-			//RELEASE no need to print this in release version
-			fprintf(stderr, "Command help mode err: %d\n", help_ret);
-			return EXIT_SUCCESS;
+			return help_ret ? EXIT_FAILURE : EXIT_SUCCESS;
 		}
 	case basichelpmode_c:
 		{
@@ -198,26 +197,16 @@ int main(int argc, char **argv)
 		}
 	case intermode_c:
 		{
-			int inter_err = interactive_mode(stdin, path);
-			if (inter_err)
-			{
-				//RELEASE no need to print this in release version
-				fprintf(stderr, "Interactive mode err: %d\n", inter_err);
-				return EXIT_FAILURE;
-			}
-			return EXIT_SUCCESS;
+			//value of inter_ret ignored
+			int inter_ret = interactive_mode(stdin, path);
+			return inter_ret ? EXIT_FAILURE : EXIT_SUCCESS;
 		}
 	case nonintermode_c:
 		{
 			//const char** cast needed, but shouldn't cause problems
-			int noninter_err = noninteractive_mode((size_t)argc, (const char**)argv, path);
-			if (noninter_err)
-			{
-				//RELEASE no need to print this in release version
-				fprintf(stderr, "Non-interactive mode err: %d\n", noninter_err);
-				return EXIT_FAILURE;
-			}
-			return EXIT_SUCCESS;
+			//value of noninter_ret ignored
+			int noninter_ret = noninteractive_mode((size_t)argc, (const char**)argv, path);
+			return noninter_ret ? EXIT_FAILURE : EXIT_SUCCESS;
 		}
 	case err_c: //errmsgs printed in parse_options
 		return EXIT_FAILURE;

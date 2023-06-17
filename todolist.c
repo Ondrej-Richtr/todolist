@@ -687,20 +687,32 @@ int cmd_move(llist *list, char *data_buffer)
 void print_basichelp(int isoption)
 {	//just prints basic help for interactive mode or help mode (when isoption == true)
 	if (isoption)
-	{
-		//TODO make this proper
-		puts("Usage:   todo [options] [command]");
-		puts("         todo [options] [-e command]");
-		puts("Example: todo -f ./path/to/myfile 'print 5'");
-		puts("         todo -e 'sort deadline' -e print");
-		puts("Options:");
-		puts("  -f <FILE>\tUse todo file at location FILE.");
-		puts("  -h,  --help\tPrints this help.");
-		
+	{	//non-interactive mode
+		puts("Usage:   todo [OPTION]");
+		puts("         todo [OPTION] COMMAND");
+		puts("         todo [OPTION] [-e COMMAND]");
+		puts("\nExample: todo -f ./path/to/myfile");
+		puts("         todo 'add My important note here'");
+		puts("         todo -e 'sort done deadline' -e print");
+		puts("\nOptions:");
+		puts("  -v,  --version\tPrints version and author.");
+		puts("  -h,  --help\t\tPrints this help.");
+		puts("  --help=[COMMAND]\tPrints detailed help for all COMMAND commands.");
+		puts("  -f <FILE>\t\tUse todo file at location FILE.");
+		puts("\nNon-interactive mode commands are:");
+		puts("  'print' - prints all todolist entries in current memory on stdout");
+		puts("  'add' - adds one new entry into current todolist");
+		puts("  'delete' - deletes specified entries from current todolist");
+		puts("  'mark done/undone' - marks specified entries as done/undone");
+		puts("  'clear all/done/undone' - clears all/done/undone todolist entries");
+		puts("  'change' - changes one existing entry that you specify");
+		puts("  'move' - moves one or range of entries to specified index or relatively");
+		puts("  'swap' - swaps two specified entries in current todolist");
+		puts("  'sort' - sorts the todolist by done/undone/deadline/text/age");
 		return;
 	}
 	
-	//some basic help print
+	//interactive mode
 	puts("------------INTERACTIVE HELP-------------");
 	puts("Interactive mode commands are:");
 	puts("\t'help' - prints this help on stdout");
@@ -716,37 +728,45 @@ void print_basichelp(int isoption)
 	puts("-----------------------------------------");
 }
 
-void print_commandhelp(enum CmdType cmd, const char* cmd_str, int isoption) //isoption is now ignored
-{	//print help text for specified command
-	//TODO update this, cmds are now always single line, also update delete, mark for ranges, non-inter mode
+void print_commandhelp(enum CmdType cmd, const char* cmd_str, int isoption)
+{	//prints help text for specified command
 	switch(cmd)
 	{
 	case help_c:
+		if (isoption)
+		{
+			puts("Command 'help' is not allowed in non-interactive mode.");
+			puts("Use one of '-h', '--help', '--help=COMMAND', '--help=COMMAND1 COMMAND2 ...' options.");
+			break;
+		}
 		puts("Command 'help' prints list of all implemented commands and their short description.");
-		puts("Using 'help COMMAND' where COMMAND is valid command, you can get detailed help for given command.");
-		puts("Example - 'help change'");
+		puts("Using 'help COMMAND ...' where COMMAND are valid commands separated by space, you can get detailed help for given command(s).");
+		puts("Example - 'help change' or 'help swap sort print'");
 		break;
 	case print_c:
 		puts("Command 'print' prints the list of all todo-list entries in current memory.");
-		puts("You can also specify the style of printing by numbers from 0 - the simplistic print, up to 5 - the most detailed print, the default is 3.");
+		printf("You can also specify the style of printing by numbers from 0 - the simplistic print, up to 5 - the most detailed print, the default is %d.\n", PRINT_DEFAULT);
 		puts("The information you can get from print is: entry index, Y/N meaning done/undone, deadline date, date of creation of this entry, entry text.");
 		puts("Example - 'print' or 'print 1'");
 		break;
 	case add_c:
-		puts("Command 'add' adds new entry in the todo-list in current memory. You can either write this new entry on the same line as 'add' or on the next line.");
+		puts("Command 'add' adds new entry into the todo-list in current memory.");
 		puts("The input formatting is: X|DEADLINE|TEXT, where X is optional to mark this entry as done, DEADLINE is in format: DAY. MONTH. YEAR and is also optional, TEXT is obligatory and should be nonempty.");
-		puts("Example - 'add X|Writing documentation' or 'add 6. 9. 2022|My birthday, yay'");
+		puts("Example - 'add X|Writing documentation' or 'add 6. 9. 2023|My birthday, yay'");
 		break;
 	case del_c:
 		puts("Command 'delete' deletes one or more entries from todo-list loaded in current memory.");
-		puts("You specify which entries to delete by writing their index (indexing from 1) and splitting them with any combination of characters '|' or a space.");
-		puts("If you write more entries to be deleted then they must be in ascending order.");
-		puts("Example - 'delete 2' or 'delete 1|2 3 8 | 11'");
+		puts("You specify which entries to delete by writing their index (indexing from 1) and splitting them with '|' or a space.");
+		puts("You can also use range of indices with FROM-TO syntax.");
+		puts("If you write more entries (or ranges) to be deleted then they must be in ascending order.");
+		puts("Example - 'delete 2' or 'delete 1-2 3 8 | 11|16-20'");
 		break;
 	case mark_c:
 		puts("Command 'mark' marks specified entries in current todo-list as done/undone.");
-		puts("To mark them as done write 'mark done' and to mark them undone write 'mark undone', after that write list of indices of entries that you want to mark in ascending order. You can separate them either with '|' or a space.");
-		puts("Example - 'mark done 3' or 'mark undone 1|2 3 8 | 11");
+		puts("To mark them as done write 'mark done' and to mark them undone write 'mark undone', after that write list of indices of entries that you want to mark in ascending order.");
+		puts("You can also use range of indices with FROM-TO syntax.");
+		puts("Separate them either with '|' or a space.");
+		puts("Example - 'mark done 3' or 'mark undone 1-2 3 8 | 11|16-20");
 		break;
 	case clear_c:
 		puts("Command 'clear' deletes all entries in current todo-list that are either done or undone or all of them.");
@@ -755,19 +775,25 @@ void print_commandhelp(enum CmdType cmd, const char* cmd_str, int isoption) //is
 		break;
 	case change_c:
 		puts("Command 'change' allows you to change specified entry. You specify which entry to change by writing it's index.");
+		if (isoption)
+		{
+			puts("The entry gets replace by new entry that will be constructed from text that you wrote after it's index.");
+			puts("Example - 'change 7 12. 8. 2013|This is the replacement!'");
+			break;
+		}
 		puts("The entry then gets replaced by new entry that you will write on new line in the same formatting as in 'add' command.");
-		puts("Example - 'change 7' followed by '12. 8. 2013|This is the replacement!'");
+		puts("Example - 'change 7' followed by '12. 8. 2013|This is the replacement!' on the next line");
 		break;
 	case move_c:
 		puts("Command 'move' moves one or range of entries to different index or relatively up/down.");
 		puts("Format for absolute move is WHICH WHERE for moving entry at index WHICH to index WHERE, or START-END WHERE for moving range of entries starting at START and ending at END to index WHERE.");
 		puts("Format for relative move is similar WHICH up/down AMOUNT or START-END up/down AMOUNT, up/down specifies direction of move and AMOUNT specifies how much.");
-		puts("WHERE can also be index one higher than max. index - this moves specified entries at the end of the todo-list.");
+		puts("WHERE can also be index one higher than maximal index - this moves specified entries to the end of the todo-list.");
 		puts("Example - 'move 3 7' or 'move 7-10 3' or 'move 18-20 up 6' or 'move 7 down 1'");
 		break;
 	case swap_c:
 		puts("Command 'swap' swaps two entries in todo-list.");
-		puts("You need to specify two valid indices refering to those entries that will be swapped.");
+		puts("You need to specify two valid indices refering to entries that will be swapped.");
 		puts("Example - 'swap 1 2' or 'swap 18  9'");
 		break;
 	case sort_c:
@@ -813,7 +839,7 @@ int cmd_help(char *data_buffer, int isoption)
 		{
 			if (isoption) fprintf(stderr, "Err: Unknown command: '%s'! Use '-h' or '--help' option to get the list of all possible commands.\n", data_buffer);
 			else fprintf(stderr, "Err: Unknown command: '%s'! Type 'help' to get the list of all possible commands.\n", data_buffer);
-			return 2;
+			return 1;
 		}
 		
 		//splitting helps with newline for better readibility
@@ -828,7 +854,9 @@ int cmd_help(char *data_buffer, int isoption)
 }
 
 int cmd_help_noninter_parse(size_t argc, const char** argv)
-{
+{	//prints help for more commands in helpmode_c,
+	//accepted format is any number of '--help=CMD' or '--help=CMD1 CMD2 CMD3...'
+	//other arguments are ignored unless they seem similar, returns nonzero when error
 	if (!argv)
 	{
 		fprintf(stderr, "Err: Program passed NULL pointer into help mode!\n");
@@ -847,9 +875,8 @@ int cmd_help_noninter_parse(size_t argc, const char** argv)
 		}
 		
 		int parse_basichelp = parse_opt_basichelp(argv[i]);
-		if (!parse_basichelp) continue; //not an error, argument is not '-h' and does not start with "--help"
-		//UNSURE maybe we should call cmd_help anyways?
-		if (parse_basichelp > 0) print_basichelp(1); //we directly print the basic help
+		//not an error, argument is not close to '--help=CMD' syntax
+		if (parse_basichelp >= 0) continue;
 
 		//at this point we know that the string starts with "--help"
 		//all of the following errs should be already recognized in parse_option_string
@@ -857,7 +884,7 @@ int cmd_help_noninter_parse(size_t argc, const char** argv)
 		if (!parse_cmdhelp) //missing equals in "--help=" syntax
 		{
 			errored_count++;
-			fprintf(stderr, "Err: Syntax error when parsing help option! Usage is '-h', '--help' or --help=CMD'.\n");
+			fprintf(stderr, "Err: Syntax error when parsing help option! Usage is '-h', '--help', '--help=CMD' or '--help=CMD1 CMD2 CMD3...'.\n");
 			continue; //maybe return
 		}
 		if (parse_cmdhelp < 0) //command in "--help=CMD" syntax is blank
@@ -882,11 +909,10 @@ int cmd_help_noninter_parse(size_t argc, const char** argv)
 		
 		if (longhelps_count) putchar('\n'); //sepparating helps for each cmd if there's more than one
 		
-		//UNSURE maybe dont return?
+		//UNSURE maybe dont return
 		int ret = cmd_help((char*)cmd_buffer, 1); //1 means that help was asked through options
-		if (ret == 1) return 3;		 //bad syntax for '--help=CMD', probably whitespace CMD argument
-		else if (ret == 2) return 4; //unknown cmd, err was already printed
-		else if (ret) return 5;		 //some unexpected err that shouldn't typically happen
+		if (ret == 1) return 3; //unknown cmd, err was already printed
+		else if (ret) return 4;	//some unexpected err that shouldn't typically happen, err printed
 		
 		longhelps_count++;
 	}
@@ -894,7 +920,7 @@ int cmd_help_noninter_parse(size_t argc, const char** argv)
 	if (!longhelps_count)
 	{
 		fprintf(stderr, "Err: Unexpected error happened when resolving '--help=CMD' options!\n");
-		return 6;
+		return 5;
 	}
 	
 	return 0;
