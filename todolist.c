@@ -15,7 +15,7 @@ int is_todoentry_valid(todo_entry *entry);
 //definitions:
 
 //time handling
-date_t get_today_date()
+date_t get_today_date(void)
 {	//tries to return current date given by system
 	//if it fails then it returns (invalid) zero date
 	date_t output;

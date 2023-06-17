@@ -149,7 +149,7 @@ enum CmdType{ help_c, print_c, add_c, del_c, mark_c, clear_c, change_c, move_c, 
 enum SpecType{ all_c, done_c, undone_c};
 
 //time handling:
-date_t get_today_date();
+date_t get_today_date(void);
 
 //parsing enums and specifiers:
 int parse_direction(const char *string, size_t *end_index);
