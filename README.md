@@ -2,36 +2,36 @@
 Terminal based unix-like TO-DO list and note keeping program
 
 - Installation:
- 1. Clone this repository anywhere you want
- ```console
-git clone https://github.com/Ondrej-Richtr/todolist
-```
- 2. Change the path of the default todo-list save file (if you want) by modifying the DEFAULT_PATH macro inside of main.c
- 3. Create this save file at the desired location if it doesn't already exist - you should make it empty from the start
+  1. Clone this repository anywhere you want
   ```console
-touch /path/to/new/default/todofile
-```
- 4. Compile all .c files with C compiler of your choice, C99 standard or later is recommended
-```console
-gcc -std=c99 *.c -o todo
-```
- 5. Optionally you can set up symlink for this program into any of your directories in PATH
- ```console
-ln -s /path/to/todo /bin/todo
-```
+  git clone https://github.com/Ondrej-Richtr/todolist
+  ```
+  2. Change the path of the default todo-list save file (if you want) by modifying the DEFAULT_PATH macro inside of main.c
+  3. Create this save file at the desired location if it doesn't already exist - you should make it empty from the start
+   ```console
+   touch /path/to/new/default/todofile
+   ```
+  4. Compile all .c files with C compiler of your choice, C99 standard or later is recommended
+  ```console
+  gcc -std=c99 *.c -o todo
+  ```
+  5. Optionally you can set up symlink for this program into any of your directories in PATH
+  ```console
+  ln -s /path/to/todo /bin/todo
+  ```
 
 - Usage:
 The todo program currently supports both Interactive and Non-interactive modes. To launch in Interactive mode simply provide no commands.
-```console
-todo
-todo -f ./path/to/other/todofile
-```
-For Non-interactive mode provide command line commands, if you want to use more commands you will need `-e` option.
-```console
-todo 'add My important note here'
-todo -e 'sort done deadline' -e print
-```
-For more information use `todo -h`.
+  ```console
+  todo
+  todo -f ./path/to/other/todofile
+  ```
+  For Non-interactive mode provide command line commands, if you want to use more commands you will need `-e` option.
+  ```console
+  todo 'add My important note here'
+  todo -e 'sort done deadline' -e print
+  ```
+  For more information use `todo -h`.
 
 - Commands:
 Now there are commands: `print`, `add`, `delete`, `mark`, `clear`, `change`, `move`, `swap`, `sort` and (only for interactive mode) `help`.
