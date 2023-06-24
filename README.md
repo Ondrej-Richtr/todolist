@@ -1,6 +1,9 @@
 # todolist
 Terminal based unix-like TO-DO list and note keeping program
 
+Works on Linux, other Unix-like operating systems, Windows and basically anywhere.
+However UTF-8 support seems to be slightly broken on Windows.
+
 - Installation:
   1. Clone this repository anywhere you want
   ```console
