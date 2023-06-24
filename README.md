@@ -1,4 +1,4 @@
-# todolist
+# todolist (development branch)
 Terminal based unix-like TO-DO list and note keeping program
 
 - Installation:
