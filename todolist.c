@@ -1025,6 +1025,11 @@ int cmd_sort(llist *list, char *data_buffer)
 	return 0;
 }
 
+int cmd_load() //TODO switching files
+{
+	
+}
+
 int do_inter_cmd(llist *list, enum CmdType type, char *buffer, FILE *input)
 {	//calls correct functionality specified by command type argument
 	//passes in buffer if the function requires it
@@ -1255,23 +1260,15 @@ int interactive_mode(FILE *input, const char *todo_file_path)
 		//err gets ignored as the program can continue and err msg is already printed
 		inter_err = inter_cmd(input, &list, line_buffer);
 	}
-
-	FILE *out_file = fopen(todo_file_path, "w");
-	if (!out_file) //IDEA maybe make this to be saved and backup file somewhere?
+	
+	int write_err = write_backedup_todofile(todo_file_path, &list); //detailed err printed inside
+	if (write_err)
 	{
-		fprintf(stderr, "Err: Failed to open file for writing at path: '%s'!\n", todo_file_path);
 		fprintf(stderr, "Abort: Because of previous error all changes were DISCARTED!\n");
-		llist_destroy_contents(&list);
-		return 2;
 	}
 	
-	//write_err gets ignored as if the error occurred the err msg was printed by write_entries
-	//if error occurs then the file gets emptied, but usually there's not much of room for error
-	int write_err = write_todofile(out_file, &list);
-	fclose(out_file);
-	
 	llist_destroy_contents(&list);
-	return write_err ? 3 : 0;
+	return write_err ? 2 : 0;
 }
 
 int noninter_cmd(llist *list, const char *str)
@@ -1363,24 +1360,15 @@ int noninteractive_mode(const size_t options_num, const char **options, const ch
 		
 		fprintf(stderr, "Abort: Because of previous error(s) there were NO CHANGES MADE!\n");
 		llist_destroy_contents(&list);
-		return 4;
+		return 3;
 	}
 
-	FILE *out_file = fopen(todo_file_path, "w");
-	
-	if (!out_file) //IDEA maybe make this to be saved and backup file somewhere?
+	int write_err = write_backedup_todofile(todo_file_path, &list); //detailed err printed inside
+	if (write_err)
 	{
-		fprintf(stderr, "Err: Failed to open file for writing changes at path: '%s'!\n", todo_file_path);
 		fprintf(stderr, "Abort: Because of previous error(s) there were NO CHANGES MADE!\n");
-		llist_destroy_contents(&list);
-		return 2;
 	}
 	
-	//write_err gets ignored as if the error occurred the err msg was printed by write_entries
-	//if error occurs then the file gets emptied, but usually there's not much of room for error
-	int write_err = write_todofile(out_file, &list);
-	fclose(out_file);
-	
 	llist_destroy_contents(&list);
-	return write_err ? 3 : 0;
+	return write_err ? 2 : 0;
 }

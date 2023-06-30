@@ -3,6 +3,8 @@
 
 #include "todolist.h"
 
+#define BACKUP_PATH_SUFFIX ".tmp"
+
 
 int write_date(FILE *out, const date_t date)
 {	//prints given date into file 'out' in style: DAY MONTH YEAR
@@ -82,5 +84,50 @@ int write_todofile(FILE *f, llist *list)
 	
 	write_standard_comments(f);
 	if (write_entries(f, list)) return 1; //errmsgs printed inside of write_entries
+	return 0;
+}
+
+int write_backedup_todofile(const char *path, llist *list) //TODO
+{
+	static const size_t suffix_len = sizeof(BACKUP_PATH_SUFFIX) / sizeof(char) - 1;
+	size_t path_len = strlen(path);
+	
+	char *backup_path = calloc(path_len + suffix_len + 1, sizeof(char));
+	if (!backup_path)
+	{
+		fprintf(stderr, "Error: Failed to allocate %lu bytes for backup path string!\n",
+				(long unsigned)((path_len + suffix_len + 1) * sizeof(char)));
+		return 1;
+	}
+	
+	strcpy(backup_path, path);
+	strcpy(backup_path + path_len, BACKUP_PATH_SUFFIX);
+	
+	FILE *backup_file = fopen(backup_path, "w");
+	if (!backup_file)
+	{
+		fprintf(stderr, "Error: Failed to create file at '%s'!\n", backup_path);
+		free(backup_path);
+		return 2;
+	}
+	
+	int write_err = write_todofile(backup_file, list); //err printed inside
+	if (write_err)
+	{
+		fclose(backup_file);
+		free(backup_path);
+		return 3;
+	}
+	
+	int rename_err = rename(backup_path, path);
+	fclose(backup_file);
+	if (rename_err)
+	{
+		fprintf(stderr, "Erorr: Failed to rename the backup file '%s'!\n", backup_path);
+		free(backup_path);
+		return 4;
+	}
+	
+	free(backup_path);
 	return 0;
 }
