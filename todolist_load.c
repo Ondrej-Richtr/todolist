@@ -62,7 +62,7 @@ int utf8_load(FILE *f, char *output, size_t output_capacity)
 
 void skip_until(FILE *f, int *in_char, char until)
 {
-	while (*in_char != EOF && (char)*in_char != until) *in_char = fgetc(f);
+	while (*in_char != EOF && (char)*in_char != until) *in_char = getc(f);
 }
 
 size_t copy_until_delimiter(size_t max_size, char buffer[max_size + 1], const char* source, int(*delim)(int))
@@ -206,7 +206,7 @@ void skip_comment_blank_lines(FILE *f, int *in_char)
 	{
 		skip_until(f, in_char, '\n');
 		//now in_char contains newline char or EOF
-		if (*in_char != EOF) *in_char = fgetc(f); //if is probably pointless
+		if (*in_char != EOF) *in_char = getc(f); //if is probably pointless
 	}
 }
 
@@ -250,7 +250,7 @@ size_t load_num_8(FILE *f, uint_least8_t* num, int *in_char) //8 bit version
 	{
 		*num *= 10;
 		*num += (uint_least8_t)(c - '0');
-		c = fgetc(f);
+		c = getc(f);
 		count++;
 	}
 	
@@ -270,7 +270,7 @@ size_t load_num_16(FILE *f, uint_least16_t* num, int *in_char) //16 bit version
 	{
 		*num *= 10;
 		*num += (uint_least16_t)(c - '0');
-		c = fgetc(f);
+		c = getc(f);
 		count++;
 	}
 	
@@ -283,7 +283,7 @@ int load_num_tolerant_8(FILE *f, uint_least8_t* num, int *in_char) //8 bit versi
 	//returns amount of digits that it read
 	if (!f || !num || !in_char) return -1;
 	
-	while (*in_char != EOF && isspace(*in_char)) *in_char = fgetc(f);
+	while (*in_char != EOF && isspace(*in_char)) *in_char = getc(f);
 	
 	return load_num_8(f, num, in_char);
 }
@@ -293,7 +293,7 @@ int load_num_tolerant_16(FILE *f, uint_least16_t* num, int *in_char) //16 bit ve
 	//returns amount of digits that it read
 	if (!f || !num || !in_char) return -1;
 	
-	while (*in_char != EOF && isspace(*in_char)) *in_char = fgetc(f);
+	while (*in_char != EOF && isspace(*in_char)) *in_char = getc(f);
 	
 	return load_num_16(f, num, in_char);
 }
@@ -305,9 +305,9 @@ int load_date(FILE *f, date_t *d, int c)
 	date_null(d); //nulling the date otherwise load works badly
 	
 	if (!load_num_tolerant_8(f, &(d->day), &c)) return -1;
-	c = fgetc(f);
+	c = getc(f);
 	if (!load_num_tolerant_8(f, &(d->month), &c)) return -1;
-	c = fgetc(f);
+	c = getc(f);
 	if (!load_num_tolerant_16(f, &(d->year), &c)) return -1;
 	return 0;
 }
@@ -360,7 +360,7 @@ int load_one_entry(FILE *f, todo_entry *entry)
 	//returns 0 if success, -1 if it reached the EOF, otherwise positive number
 	if (!f || !entry) return 1;
 	
-	int c = fgetc(f);
+	int c = getc(f);
 	skip_comment_blank_lines(f, &c);	//skips commented lines and empty lines
 	
 	switch(c)
@@ -373,13 +373,13 @@ int load_one_entry(FILE *f, todo_entry *entry)
 		default: return 2;				//otherwise
 	}
 
-	while (isseparator(c = fgetc(f))); //skipping separators
+	while (isseparator(c = getc(f))); //skipping separators
 	if (load_date(f, &entry->deadline, c)) return 3;
 	
-	while (isseparator(c = fgetc(f))); //skipping separators
+	while (isseparator(c = getc(f))); //skipping separators
 	if (load_date(f, &entry->created_date, c)) return 4;
 	
-	while (isseparator(c = fgetc(f))); //skipping separators
+	while (isseparator(c = getc(f))); //skipping separators
 
 	if (ungetc(c, f) == EOF) return 5;
 	
