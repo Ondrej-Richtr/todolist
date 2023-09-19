@@ -48,13 +48,13 @@ int write_entries(FILE *f, llist *list)
 	
 	for (struct node *n = list->first; n != NULL; n = n->next)
 	{
-		int write_err = write_one_entry(f, n->val);
+		int write_err = write_one_entry(f, &n->val);
 		if (!write_err) continue;
 		
 		//write_err value gets ignored
 		//same error message as in cmd_add:
 		fprintf(stderr, "Err: Failed to write following entry into the todo file!\nThe entry: ");
-		print_todoentry(stderr, n->val, 2);
+		print_todoentry(stderr, &n->val, 2);
 		fputc('\n', stderr);
 		return 1;
 	}
@@ -87,7 +87,7 @@ int write_todofile(FILE *f, llist *list)
 	return 0;
 }
 
-int write_backedup_todofile(const char *path, llist *list) //TODO
+int write_backedup_todofile(const char *path, llist *list)
 {
 	static const size_t suffix_len = sizeof(BACKUP_PATH_SUFFIX) / sizeof(char) - 1;
 	size_t path_len = strlen(path);

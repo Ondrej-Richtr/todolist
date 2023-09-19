@@ -399,23 +399,15 @@ int load_entries(llist *list, const char *path)
 		return 1;
 	}
 		
-	todo_entry *entry = NULL;
+	todo_entry entry = { 0 };
 	int status = 0;
 	size_t index = 1; //entry indexing starts from 1
 	
 	while (!status)
 	{
-		entry = calloc(1, sizeof(todo_entry)); //using calloc so the entry is nulled already
+		entry = (todo_entry){ 0 };
 		
-		if (entry == NULL)
-		{	//entry couldn't get allocated
-			fprintf(stderr, "Err: Couldn't allocate memory of %u bytes!\n", sizeof(todo_entry));
-			llist_destroy_contents(list);
-			fclose(f);
-			return 2;
-		}
-		
-		if ((status = load_one_entry(f, entry)) > 0)
+		if ((status = load_one_entry(f, &entry)) > 0)
 		{	//positive return value means something went wrong
 			fprintf(stderr, "Err: Loading of a entry '%u' failed!", index);
 			switch (status)
@@ -438,21 +430,21 @@ int load_entries(llist *list, const char *path)
 				fprintf(stderr, " -> Unexpected error.\n");
 				break;
 			}
+			
 			llist_destroy_contents(list);
-			free(entry);
 			fclose(f);
 			return 3;
 		}
 
-		if (status == -1) free(entry);			//EOF -> entry gets deleted
-		else if (!llist_add_end(list, entry))	//Success -> entry gets added to list
+		//-1 means EOF, llist_add success -> entry gets added to list
+		if (status != -1 && !llist_add_end(list, &entry))
 		{	//adding to list failed
 			//same error message as in cmd_add:
 			fprintf(stderr, "Err: Failed to add following entry into the list!\nThe entry: '");
-			print_todoentry(stderr, entry, 0);
+			print_todoentry(stderr, &entry, 0);
 			fputs("'\n", stderr);
+			
 			llist_destroy_contents(list);
-			free(entry);
 			fclose(f);
 			return 4;
 		}

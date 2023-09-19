@@ -250,7 +250,7 @@ void print_todolist(const llist *list, const int style)
 	for (struct node *n = list->first; n != NULL; n = n->next)
 	{
 		if (style > 2) printf("%3u\t", num++);
-		print_todoentry(stdout, n->val, style);
+		print_todoentry(stdout, &n->val, style);
 		putchar('\n');
 	}
 }
@@ -298,37 +298,28 @@ int cmd_add(llist *list, char *data_buffer)
 		return -1;
 	}
 	
-	todo_entry *entry = malloc(sizeof(todo_entry));
-	if (!entry)
-	{
-		fprintf(stderr, "Err: Failed to allocate %u bytes of memory!\n", sizeof(todo_entry));
-		return 1;
-	}
-	
 	//maybe this could cause problems?
 	while (*data_buffer && isspace((int)*data_buffer)) data_buffer++; //skipping initial whitespaces
 	
-	if (generate_entry_from_string(data_buffer, entry)) //only deadline date can be loaded incorrectly
+	todo_entry entry = { 0 };
+	if (generate_entry_from_string(data_buffer, &entry)) //only deadline date can be loaded incorrectly
 	{
 		//error message should get printed by generate_entry_splitted
-		free(entry);
+		return 1;
+	}
+	
+	if (!is_todoentry_valid(&entry)) //we check if the final entry makes sense, if not discard it
+	{
+		fprintf(stderr, "Err: Entry to be added is not valid! (Has no text and no date)\n");
 		return 2;
 	}
 	
-	if (!is_todoentry_valid(entry)) //we check if the final entry makes sense, if not discard it
-	{
-		fprintf(stderr, "Err: Entry to be added is not valid! (Has no text and no date)\n");
-		free(entry);
-		return 3;
-	}
-	
-	if (!llist_add_end(list, entry))
+	if (!llist_add_end(list, &entry))
 	{
 		fprintf(stderr, "Err: Failed to add following entry into the list!\nThe entry: ");
-		print_todoentry(stderr, entry, 2);
+		print_todoentry(stderr, &entry, 2);
 		fputc('\n', stderr);
-		free(entry);
-		return 4;
+		return 3;
 	}
 	
 	return 0;
@@ -376,7 +367,7 @@ int mark_range(llist *list, size_t indexS, size_t indexE, size_t orig_offset, in
 			return -3;
 		}
 		
-		n->val->status = is_done ? 1 : 0; //ternary operator to be sure that status attribute is always 1 or 0		
+		n->val.status = is_done ? 1 : 0; //ternary operator to be sure that status attribute is always 1 or 0		
 		n = n->next;
 	}
 	
@@ -561,7 +552,7 @@ int cmd_change(llist *list, char *data_buffer, FILE *input, int is_verbose, int 
 		}
 	}
 	
-	todo_entry new_entry;
+	todo_entry new_entry = { 0 };
 	int gen_err = generate_entry_from_string(entry_str, &new_entry);
 	if (gen_err)
 	{

@@ -52,10 +52,8 @@ inline int is_todoentry_valid(todo_entry *entry)
 struct node
 {
 	struct node *next;
-	todo_entry *val;
+	todo_entry val;
 };
-
-void node_destroy(struct node *n);
 
 typedef struct linked_list
 {

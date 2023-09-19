@@ -4,14 +4,6 @@
 #include "todolist.h"
 
 //linkedlist definitions
-void node_destroy(struct node *n)
-{
-	if (n == NULL) return;
-	
-	free(n->val);
-	free(n);
-}
-
 size_t llist_length(llist *list)
 {
 	size_t length = 0;
@@ -56,30 +48,34 @@ struct node* llist_pop_node_first(llist *list)
 }
 
 int llist_add_end(llist *list, todo_entry *val)
-{	//returns true value wether entry was added into the list
-	if (!list) return 0;
+{	//adds copy of 'val' into given linked list at the end
+	//returns true value if the entry was added
+	if (!list || !val) return 0;
 	
-	struct node *n = malloc(sizeof(struct node));
+	//calloc is generally safer here (prob. useless now tho)
+	struct node *n = calloc(1, sizeof(struct node));
 	
 	if (!n) return 0;
 	
 	n->next = NULL;
-	n->val = val;
+	n->val = *val;
 	llist_add_node_end(list, n);
 	
 	return 1;
 }
 
 int llist_add_first(llist *list, todo_entry *val)
-{	//returns true value wether entry was added into the list
-	if (!list) return 0;
+{	//adds copy of 'val' into given linked list at the start
+	//returns true value if the entry was added
+	if (!list || !val) return 0;
 	
-	struct node *n = malloc(sizeof(struct node));
+	//calloc is generally safer here (prob. useless now tho)
+	struct node *n = calloc(1, sizeof(struct node));
 	
 	if (!n) return 0;
 	
 	n->next = NULL;
-	n->val = val;
+	n->val = *val;
 	llist_add_node_first(list, n);
 	
 	return 1;
@@ -97,7 +93,8 @@ void llist_delete_after(llist* list, struct node *prev)
 	if (deleted == list->last) list->last = prev;
 	
 	if (prev) prev->next = deleted->next;
-	node_destroy(deleted);
+	
+	free(deleted);
 }
 
 void llist_destroy_contents(llist *list) //destroys contents deeply
@@ -106,7 +103,7 @@ void llist_destroy_contents(llist *list) //destroys contents deeply
 	
 	while ((n = llist_pop_node_first(list)) != NULL)
 	{
-		node_destroy(n);
+		free(n);
 	}
 }
 
@@ -131,7 +128,7 @@ todo_entry *llist_nth_entry(llist *list, size_t n)
 {	//returns pointer to nth entry linked list, indexing from zero
 	//if there is no such entry then it returns NULL
 	struct node *entry_node = llist_nth_node(list, n);
-	if (entry_node) return entry_node->val;
+	if (entry_node) return &entry_node->val;
 	return NULL;
 }
 
@@ -170,7 +167,7 @@ void llist_clear(llist *list, uint_least8_t status)
 	{
 		next = n->next;
 		
-		if (n->val->status == status) llist_delete_after(list, prev);
+		if (n->val.status == status) llist_delete_after(list, prev);
 		else prev = n;
 		
 		n = next;
@@ -193,7 +190,7 @@ int llist_disconnect(llist *list, llist *into, size_t start, size_t end)
 	
 	if (length == end + 1) end_node = list->last;
 	else end_node = llist_nth_node(list, end);
-	if (!end_node) return 3; //unexpected if it happens (probably bug in somehting)
+	if (!end_node) return 3; //unexpected if it happens (probably bug in something)
 	
 	//touching the lists
 	if (start_node_prev == NULL)
@@ -276,7 +273,7 @@ int llist_move(llist *list, size_t from, size_t to, size_t where)
 
 int llist_swap(llist *list, size_t idx1, size_t idx2)
 {	//swaps entries on given indices, if they are out of bounds then returns nonzero
-	//indexing is from zero
+	//indexing is from 0
 	if (!list) return -1;
 	
 	size_t min = idx1, max = idx2, index = 0;
@@ -300,7 +297,7 @@ int llist_swap(llist *list, size_t idx1, size_t idx2)
 	max_node = current;
 	
 	//swaping
-	todo_entry *tmp = min_node->val;
+	todo_entry tmp = min_node->val;
 	min_node->val = max_node->val;
 	max_node->val = tmp;	
 
@@ -323,7 +320,7 @@ int llist_sort(llist *list, int(*comparator)(const todo_entry*, const todo_entry
 		struct node *current = sorted->next;
 		
 		//current is already in correct spot
-		if (comparator(sorted->val, current->val) >= 0)
+		if (comparator(&sorted->val, &current->val) >= 0)
 		{
 			sorted = sorted->next;
 			continue;
@@ -338,7 +335,7 @@ int llist_sort(llist *list, int(*comparator)(const todo_entry*, const todo_entry
 		//finding correct spot for currently sorted node
 		struct node *check = list->first, *check_prev = NULL;
 		//this cycle will end as check must at some point reach 'sorted' node
-		while (comparator(check->val, current->val) >= 0)
+		while (comparator(&check->val, &current->val) >= 0)
 		{
 			check_prev = check;
 			check = check->next;
