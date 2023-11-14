@@ -2,7 +2,7 @@
 Terminal based unix-like TO-DO list and note keeping program
 
 Works on Linux, other Unix-like operating systems, Windows and basically anywhere.
-However UTF-8 support seems to be slightly broken on Windows.
+UTF-8 support sucks in Windows command line (because Windows command line sucks).
 
 - Installation:
   1. Clone this repository anywhere you want
